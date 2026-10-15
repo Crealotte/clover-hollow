@@ -31,7 +31,7 @@ button:focus-visible{outline:3px solid var(--barn);outline-offset:2px}
 .xpbar i{display:block;height:100%;background:var(--xp);transition:width .3s}
 
 .field{flex:1;min-height:0;overflow:auto;background:linear-gradient(var(--sky) 0,var(--meadow) 45%);padding-block:12px 24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-#board{position:relative;margin:0 auto;touch-action:none}
+#board{position:relative;margin:0 auto;touch-action:none;isolation:isolate} /* keeps sprite z-indexes below menus */
 .land,.edge{position:absolute;left:0;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
 .edge{background:var(--soil2)}
 .land{background:var(--grass2)}
