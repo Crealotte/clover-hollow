@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FarmVille Archive</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sniglet:wght@400;800&family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+/* Layout: a reference archive. Category shelf on top, then a filter bar and a sortable table for the open category; a wishlist collects picks for Clover Hollow. */
+:root{
+  --bg:#fbf6ec; --panel:#fffdf8; --ink:#33240f; --muted:#76604a; --line:#e6d8bd;
+  --accent:#b8412c; --leaf:#4b8a2c; --gold:#b98500; --chip:#f3e6cc; --row:#fdf3e2;
+  --font-display:'Sniglet','Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;
+  --font-body:'Nunito','Segoe UI',system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1812;--panel:#262019;--ink:#f1e6d3;--muted:#b8a68d;--line:#3d3328;--accent:#ee7a5f;--leaf:#8cc66a;--gold:#e5b94a;--chip:#33291e;--row:#2d251c;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1d1812;--panel:#262019;--ink:#f1e6d3;--muted:#b8a68d;--line:#3d3328;--accent:#ee7a5f;--leaf:#8cc66a;--gold:#e5b94a;--chip:#33291e;--row:#2d251c;color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-block:18px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:12px}
+h1{font-family:var(--font-display);font-weight:800;font-size:clamp(1.8rem,5vw,2.4rem);color:var(--accent);margin:0;text-wrap:balance}
+h2{font-family:var(--font-display);font-weight:800;font-size:1.3rem;margin:0}
+.lede{color:var(--muted);font-weight:600;margin:0;max-width:72ch}
+.shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.cat{font:inherit;color:inherit;text-align:left;background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:8px 12px;cursor:pointer;display:grid;gap:0}
+.cat b{font-weight:800;font-size:.92rem}
+.cat span{font-family:var(--font-display);font-size:1.25rem;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1.2}
+.cat[aria-pressed="true"]{border-color:var(--accent);background:var(--row)}
+.cat.wish span{color:var(--leaf)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px;border-bottom:2px solid var(--line)}
+.bar input,.bar select{font:inherit;min-width:0;padding:7px 11px;border-radius:10px;border:2px solid var(--line);background:var(--panel);color:var(--ink)}
+.bar input{flex:1 1 220px}
+.bar label{display:flex;gap:6px;align-items:center;font-weight:700;font-size:.85rem;color:var(--muted)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#count{font-size:.85rem;color:var(--muted);font-weight:700}
+.tablebox{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.86rem}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+th{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);cursor:pointer;user-select:none;background:var(--panel)}
+th[aria-sort="ascending"]::after{content:" ▲"}th[aria-sort="descending"]::after{content:" ▼"}
+td.n{font-weight:800;white-space:normal;min-width:150px;max-width:280px}
+tbody tr.r{cursor:pointer}tbody tr.r:hover{background:var(--row)}
+.star{font:inherit;border:0;background:none;cursor:pointer;font-size:1.05rem;color:var(--line);padding:0 2px;line-height:1}
+.star[aria-pressed="true"]{color:var(--gold)}
+.approx{color:var(--muted)}
+.pill{display:inline-block;font-size:.66rem;font-weight:800;padding:1px 6px;border-radius:6px;background:var(--chip);color:var(--accent);margin-left:4px;vertical-align:1px;text-transform:uppercase;letter-spacing:.04em}
+.detail td{white-space:normal;max-width:none;background:var(--row);cursor:default}
+.dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px 16px}
+.dl dt{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:800}
+.dl dd{margin:0;font-weight:700;overflow-wrap:anywhere}
+.about{margin:8px 0 0;max-width:85ch}
+.wiki{font-weight:800;color:var(--accent)}
+.more{display:flex;justify-content:center;padding:10px}
+.more button{font:inherit;font-weight:800;border:2px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 16px;cursor:pointer}
+.empty{padding:20px;color:var(--muted);font-weight:700}
+.foot{font-size:.82rem;color:var(--muted);max-width:90ch}
+</style>
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <h1>FarmVille Archive</h1>
+  <p class="lede">Everything the FarmVille fan wiki lists, from launch day (19 June 2009) to the shutdown (31 December 2020). Pick a category, search and sort, and tap the star on anything you want in Clover Hollow. Your picks collect in the Wishlist.</p>
+  <div class="shelf" id="shelf"></div>
+  <div class="bar">
+    <input id="q" type="search" placeholder="Search names, events, farms…" aria-label="Search">
+    <select id="year" aria-label="Release year"><option value="">All years</option></select>
+    <label><input type="checkbox" id="limonly"> Limited only</label>
+  </div>
+  <div id="count"></div>
+  <div class="tablebox"><table><thead id="th"></thead><tbody id="tb"></tbody></table></div>
+  <div class="more" id="more" hidden><button id="moreb">Show more</button></div>
+  <p class="foot">Dates with ~ are approximate: the wiki gives no release date, so the date the page was first written is shown instead, usually within days of release. Some wiki pages were never finished, so some entries have gaps. The wishlist is saved in this browser only. Source: farmville.fandom.com, read 15 October 2026.</p>
+</div>
+
+<script>
+const LABEL={released:'Released',lastDay:'Last day',level:'Level',cost:'Cost',yields:'Gives',every:'Every (h)',xp:'XP',sells:'Sells for',size:'Size',farm:'Farm',source:'Comes from',keptIn:'Kept in',event:'Event',limited:'Limited',extra:'More'};
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const esc=t=>String(t??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const fd=s=>{if(!s)return'';const a=s[0]==='~',t=s.replace('~','');if(!/^\d{8}$/.test(t))return esc(s);return`${a?'<span class="approx">~</span>':''}${+t.slice(6,8)} ${MON[+t.slice(4,6)-1]} ${t.slice(0,4)}`};
+let META=[],cur=null,DATA={},shown=150,sortK='name',sortD=1,openRow=null;
+let WISH={};try{WISH=JSON.parse(localStorage.getItem('fv-wish')||'{}')}catch(e){}
+const saveWish=()=>{try{localStorage.setItem('fv-wish',JSON.stringify(WISH))}catch(e){}};
+const shelf=document.getElementById('shelf');
+function drawShelf(){
+  const n=Object.keys(WISH).length;
+  shelf.innerHTML=META.map(m=>`<button class="cat" data-k="${m.key}" aria-pressed="${cur===m.key}"><b>${esc(m.label)}</b><span>${m.count.toLocaleString()}</span></button>`).join('')+`<button class="cat wish" data-k="wish" aria-pressed="${cur==='wish'}"><b>★ Wishlist</b><span>${n}</span></button>`;
+}
+shelf.onclick=e=>{const b=e.target.closest('.cat');if(b)openCat(b.dataset.k)};
+async function load(k){if(DATA[k])return DATA[k];const j=await fetch(k+'.json').then(r=>r.json());const ci=Object.fromEntries(j.cols.map((c,i)=>[c,i]));
+  j.items=j.rows.map(r=>{const o={};j.cols.forEach((c,i)=>o[c]=r[i]);o._cat=k;o._rel=(o.released||'').replace('~','');o._hay=r.join(' ').toLowerCase();return o});DATA[k]=j;return j}
+async function openCat(k){cur=k;shown=150;openRow=null;sortK='name';sortD=1;drawShelf();
+  document.getElementById('tb').innerHTML='<tr><td class="empty">Loading…</td></tr>';
+  if(k==='wish'){const need=[...new Set(Object.values(WISH))];await Promise.all(need.map(load))}else await load(k);
+  const yrs=new Set();items().forEach(o=>{if(o._rel)yrs.add(o._rel.slice(0,4))});
+  const ys=document.getElementById('year');ys.innerHTML='<option value="">All years</option>'+[...yrs].sort().map(y=>`<option>${y}</option>`).join('');
+  draw()}
+function items(){if(cur==='wish'){return Object.entries(WISH).map(([id,k])=>DATA[k]&&DATA[k].items.find(o=>o._cat+':'+o.name===id)).filter(Boolean)}return DATA[cur].items}
+function cols(){if(cur==='wish')return['_cat','released','cost','yields','every','event'];return DATA[cur].cols.filter(c=>c!=='name'&&c!=='about'&&c!=='extra').slice(0,9)}
+function draw(){
+  const q=document.getElementById('q').value.trim().toLowerCase(),y=document.getElementById('year').value,lim=document.getElementById('limonly').checked;
+  const C=cols();
+  document.getElementById('th').innerHTML='<tr><th aria-label="Wishlist"></th><th data-k="name"'+(sortK==='name'?` aria-sort="${sortD>0?'ascending':'descending'}"`:'')+'>Name</th>'+C.map(c=>`<th data-k="${c}"${sortK===c?` aria-sort="${sortD>0?'ascending':'descending'}"`:''}>${c==='_cat'?'Category':LABEL[c]||c}</th>`).join('')+'</tr>';
+  const key=o=>sortK==='released'?o._rel:o[sortK];
+  const num=v=>{const m=String(v||'').match(/^[\d.,]+/);return m?parseFloat(m[0].replace(/,/g,'')):null};
+  let L=items().filter(o=>(!q||o._hay.includes(q))&&(!y||o._rel.startsWith(y))&&(!lim||o.limited==='Y'));
+  L.sort((a,b)=>{let x=key(a),z=key(b);if(!x&&!z)return 0;if(!x)return 1;if(!z)return -1;const nx=num(x),nz=num(z);if(sortK!=='name'&&sortK!=='released'&&nx!=null&&nz!=null)return(nx-nz)*sortD;return String(x).localeCompare(String(z))*sortD});
+  document.getElementById('count').textContent=L.length.toLocaleString()+(cur==='wish'?' picks':' entries');
+  const catLabel=k=>(META.find(m=>m.key===k)||{}).label||k;
+  const tb=document.getElementById('tb');
+  if(!L.length){tb.innerHTML=`<tr><td class="empty" colspan="${C.length+2}">${cur==='wish'?'No picks yet. Open a category and tap ☆ on anything you want in Clover Hollow.':'Nothing matches. Try a different search or year.'}</td></tr>`}
+  else tb.innerHTML=L.slice(0,shown).map((o,i)=>{const id=o._cat+':'+o.name;
+    return`<tr class="r" data-i="${i}"><td><button class="star" data-w="${esc(id)}" aria-pressed="${!!WISH[id]}" aria-label="Add ${esc(o.name)} to wishlist">${WISH[id]?'★':'☆'}</button></td><td class="n">${esc(o.name)}${o.limited==='Y'?'<span class="pill">limited</span>':''}</td>${C.map(c=>`<td title="${esc(o[c])}">${c==='released'||c==='lastDay'?fd(o[c]):c==='_cat'?esc(catLabel(o._cat)):esc(o[c])}</td>`).join('')}</tr>${openRow===id?detail(o,C.length+2):''}`}).join('');
+  window._L=L;document.getElementById('more').hidden=L.length<=shown;
+}
+function detail(o,span){const D=DATA[o._cat];const F=D.cols.filter(c=>c!=='name'&&c!=='about'&&o[c]).map(c=>`<div><dt>${LABEL[c]||c}</dt><dd>${c==='released'||c==='lastDay'?fd(o[c]):esc(o[c])}</dd></div>`).join('');
+  const slug=o.name.replace(/ /g,'_');
+  return`<tr class="detail"><td colspan="${span}"><dl class="dl">${F}</dl>${o.about?`<p class="about">${esc(o.about)}</p>`:''}<p class="about"><a class="wiki" href="https://farmville.fandom.com/wiki/${encodeURIComponent(slug)}" target="_blank" rel="noopener">Open the wiki page</a></p></td></tr>`}
+document.getElementById('tb').onclick=e=>{const s=e.target.closest('.star');if(s){const id=s.dataset.w;if(WISH[id])delete WISH[id];else WISH[id]=id.split(':')[0];saveWish();drawShelf();draw();return}
+  const tr=e.target.closest('tr.r');if(!tr)return;const o=window._L[+tr.dataset.i];const id=o._cat+':'+o.name;openRow=openRow===id?null:id;draw()};
+document.getElementById('th').onclick=e=>{const th=e.target.closest('th[data-k]');if(!th)return;const k=th.dataset.k;if(sortK===k)sortD=-sortD;else{sortK=k;sortD=1}draw()};
+['q','year','limonly'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{shown=150;draw()}));
+document.getElementById('moreb').onclick=()=>{shown+=250;draw()};
+fetch('meta.json').then(r=>r.json()).then(m=>{META=m;drawShelf();openCat('crops')});
+</script>
+
+</body>
+</html>
