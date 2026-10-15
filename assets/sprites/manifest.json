@@ -1,0 +1,695 @@
+{
+ "tile_grass": {
+  "w": 128,
+  "h": 76,
+  "anchor": [
+   64,
+   33
+  ],
+  "group": "tiles"
+ },
+ "tile_grass_alt": {
+  "w": 128,
+  "h": 76,
+  "anchor": [
+   64,
+   33
+  ],
+  "group": "tiles"
+ },
+ "tile_plowed": {
+  "w": 128,
+  "h": 76,
+  "anchor": [
+   64,
+   33
+  ],
+  "group": "tiles"
+ },
+ "tile_fallow": {
+  "w": 128,
+  "h": 76,
+  "anchor": [
+   64,
+   33
+  ],
+  "group": "tiles"
+ },
+ "tile_water": {
+  "w": 128,
+  "h": 76,
+  "anchor": [
+   64,
+   33
+  ],
+  "group": "tiles"
+ },
+ "sunpea_seed": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "sunpea_sprout": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "sunpea_young": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "sunpea_ripe": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "sunpea_withered": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "bramblebean_seed": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "bramblebean_sprout": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "bramblebean_young": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "bramblebean_ripe": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "bramblebean_withered": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "glowroot_seed": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "glowroot_sprout": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "glowroot_young": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "glowroot_ripe": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "glowroot_withered": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "puffcorn_seed": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "puffcorn_sprout": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "puffcorn_young": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "puffcorn_ripe": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "puffcorn_withered": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "velvet_seed": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "velvet_sprout": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "velvet_young": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "velvet_ripe": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "velvet_withered": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "frostmint_seed": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "frostmint_sprout": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "frostmint_young": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "frostmint_ripe": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "frostmint_withered": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "emberpepper_seed": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "emberpepper_sprout": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "emberpepper_young": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "emberpepper_ripe": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "emberpepper_withered": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "cloudberry_seed": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "cloudberry_sprout": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "cloudberry_young": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "cloudberry_ripe": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "cloudberry_withered": {
+  "w": 128,
+  "h": 128,
+  "anchor": [
+   64,
+   112
+  ],
+  "group": "crops"
+ },
+ "tree_blushapple_growing": {
+  "w": 160,
+  "h": 200,
+  "anchor": [
+   80,
+   186
+  ],
+  "group": "trees"
+ },
+ "tree_blushapple_ready": {
+  "w": 160,
+  "h": 200,
+  "anchor": [
+   80,
+   186
+  ],
+  "group": "trees"
+ },
+ "tree_sugarplum_growing": {
+  "w": 160,
+  "h": 200,
+  "anchor": [
+   80,
+   186
+  ],
+  "group": "trees"
+ },
+ "tree_sugarplum_ready": {
+  "w": 160,
+  "h": 200,
+  "anchor": [
+   80,
+   186
+  ],
+  "group": "trees"
+ },
+ "tree_starpeach_growing": {
+  "w": 160,
+  "h": 200,
+  "anchor": [
+   80,
+   186
+  ],
+  "group": "trees"
+ },
+ "tree_starpeach_ready": {
+  "w": 160,
+  "h": 200,
+  "anchor": [
+   80,
+   186
+  ],
+  "group": "trees"
+ },
+ "tree_mooncitrus_growing": {
+  "w": 160,
+  "h": 200,
+  "anchor": [
+   80,
+   186
+  ],
+  "group": "trees"
+ },
+ "tree_mooncitrus_ready": {
+  "w": 160,
+  "h": 200,
+  "anchor": [
+   80,
+   186
+  ],
+  "group": "trees"
+ },
+ "animal_cow_idle": {
+  "w": 128,
+  "h": 112,
+  "anchor": [
+   64,
+   102
+  ],
+  "group": "animals"
+ },
+ "animal_cow_ready": {
+  "w": 128,
+  "h": 112,
+  "anchor": [
+   64,
+   102
+  ],
+  "group": "animals"
+ },
+ "animal_hen_idle": {
+  "w": 128,
+  "h": 112,
+  "anchor": [
+   64,
+   102
+  ],
+  "group": "animals"
+ },
+ "animal_hen_ready": {
+  "w": 128,
+  "h": 112,
+  "anchor": [
+   64,
+   102
+  ],
+  "group": "animals"
+ },
+ "animal_sheep_idle": {
+  "w": 128,
+  "h": 112,
+  "anchor": [
+   64,
+   102
+  ],
+  "group": "animals"
+ },
+ "animal_sheep_ready": {
+  "w": 128,
+  "h": 112,
+  "anchor": [
+   64,
+   102
+  ],
+  "group": "animals"
+ },
+ "animal_pig_idle": {
+  "w": 128,
+  "h": 112,
+  "anchor": [
+   64,
+   102
+  ],
+  "group": "animals"
+ },
+ "animal_pig_ready": {
+  "w": 128,
+  "h": 112,
+  "anchor": [
+   64,
+   102
+  ],
+  "group": "animals"
+ },
+ "farmer_idle": {
+  "w": 96,
+  "h": 150,
+  "anchor": [
+   48,
+   142
+  ],
+  "group": "farmer"
+ },
+ "farmer_walk1": {
+  "w": 96,
+  "h": 150,
+  "anchor": [
+   48,
+   142
+  ],
+  "group": "farmer"
+ },
+ "farmer_walk2": {
+  "w": 96,
+  "h": 150,
+  "anchor": [
+   48,
+   142
+  ],
+  "group": "farmer"
+ },
+ "farmer_work": {
+  "w": 96,
+  "h": 150,
+  "anchor": [
+   48,
+   142
+  ],
+  "group": "farmer"
+ },
+ "building_barn": {
+  "w": 220,
+  "h": 214,
+  "anchor": [
+   110,
+   192
+  ],
+  "group": "buildings"
+ },
+ "decor_haybale": {
+  "w": 96,
+  "h": 80,
+  "anchor": [
+   48,
+   66
+  ],
+  "group": "decor"
+ },
+ "decor_fence": {
+  "w": 96,
+  "h": 92,
+  "anchor": [
+   48,
+   64
+  ],
+  "group": "decor"
+ },
+ "decor_scarecrow": {
+  "w": 96,
+  "h": 144,
+  "anchor": [
+   48,
+   136
+  ],
+  "group": "decor"
+ },
+ "decor_flowers": {
+  "w": 96,
+  "h": 80,
+  "anchor": [
+   48,
+   60
+  ],
+  "group": "decor"
+ },
+ "decor_well": {
+  "w": 112,
+  "h": 128,
+  "anchor": [
+   56,
+   116
+  ],
+  "group": "decor"
+ },
+ "icon_coin": {
+  "w": 64,
+  "h": 64,
+  "anchor": [
+   32,
+   32
+  ],
+  "group": "icons"
+ },
+ "icon_xp": {
+  "w": 64,
+  "h": 64,
+  "anchor": [
+   32,
+   32
+  ],
+  "group": "icons"
+ },
+ "icon_hoe": {
+  "w": 64,
+  "h": 64,
+  "anchor": [
+   32,
+   32
+  ],
+  "group": "icons"
+ },
+ "icon_seedbag": {
+  "w": 64,
+  "h": 64,
+  "anchor": [
+   32,
+   32
+  ],
+  "group": "icons"
+ },
+ "icon_gift": {
+  "w": 64,
+  "h": 64,
+  "anchor": [
+   32,
+   32
+  ],
+  "group": "icons"
+ },
+ "icon_ribbon": {
+  "w": 64,
+  "h": 64,
+  "anchor": [
+   32,
+   32
+  ],
+  "group": "icons"
+ }
+}
