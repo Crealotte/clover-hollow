@@ -36,24 +36,24 @@ label{display:flex;gap:6px;align-items:center;font-weight:700;font-size:.85rem;c
     <li>Open ChatGPT and start <b>one new chat</b> just for Clover Hollow art. Keeping everything in one chat keeps the style consistent.</li>
     <li>Copy the <b>Style master</b> prompt and send it. Regenerate until you truly love the barn. That picture becomes the style every other sprite copies.</li>
     <li>Then copy the prompts below one by one, <b>in the same chat</b>. Each one says "same style as the barn".</li>
-    <li>If a picture comes back with a background, reply: <i>"Same image, but with a fully transparent background, PNG."</i></li>
+    <li>Every picture comes on a plain white background. That's on purpose: Claude removes the white for you, so you don't need transparency.</li>
     <li>Download each picture and name it like the title on its card, for example <b>sunpea_ripe.png</b>.</li>
     <li>Send the files to me (or to Claude Code). I'll trim them, size them and put them into the game.</li>
   </ol>
+  <p class="tip">You only need one walking picture. The game switches between standing and walking and mirrors the farmer for the other direction, so there's no need to fight the tool over left and right feet.</p>
   <p class="tip">Check that the art tool lets you use its pictures in your own game. ChatGPT's terms allow this today, but terms can change, so take a quick look before you publish.</p>
   <p class="prog" id="prog"></p>
   <div id="list"></div>
 </div>
 
 <script>
-const STYLE=`Cozy hand-painted farm game art, isometric 3/4 view from about 30 degrees above. Rich painterly texture with visible soft brush strokes, warm saturated colors, gentle light from the top left with warm highlights and cool soft shadows, thin warm dark-brown outlines (never black), rounded friendly shapes, charming and wholesome. One single object, centered, fully visible, nothing cropped. Fully transparent background, PNG. No text, no logos, no frame, no ground beyond a small soft contact shadow.`;
+const STYLE=`Cozy hand-painted farm game art, isometric 3/4 view from about 30 degrees above. Rich painterly texture with visible soft brush strokes, warm saturated colors, gentle light from the top left with warm highlights and cool soft shadows, thin warm dark-brown outlines (never black), rounded friendly shapes, charming and wholesome. One single object, centered, fully visible, nothing cropped. Plain solid white background (not transparent, no checkerboard). No text, no logos, no frame, no ground beyond a small soft contact shadow.`;
 const G=[
  ['Style master',[
   ['building_barn','STYLE MASTER. '+STYLE+'\n\nDraw: a big classic red wooden farm barn with white trim, a gabled roof with dark slate shingles, a large X-braced front door and a small hayloft window, a little weathervane on top.']]],
  ['Farmer',[
   ['farmer_idle','Same style as the barn. Draw: a cheerful young farmer character standing, full body, facing the viewer at a 3/4 angle. Straw hat with a red band, red checked shirt, blue denim overalls with brass buttons, brown boots, holding a small hoe. Friendly face with rosy cheeks.'],
   ['farmer_walk1','Same style and same farmer as before. Draw the farmer mid-step walking toward the bottom right, left foot forward.'],
-  ['farmer_walk2','Same style and same farmer as before. Draw the farmer mid-step walking toward the bottom right, right foot forward.'],
   ['farmer_work','Same style and same farmer as before. Draw the farmer swinging the hoe down into the soil, working.']]],
  ['Ground tiles',[
   ['tile_grass','Same style as the barn. Draw: one isometric diamond-shaped ground tile of lush green grass with tiny wildflowers, seen from above at 30 degrees, with a thin brown soil edge visible on the two front sides. The tile is exactly twice as wide as it is tall.'],
