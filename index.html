@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Clover Hollow Farm</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sniglet:wght@400;800&family=Nunito:wght@500;700;800&display=swap">
+<style>
+/* Layout: one-screen game. Wooden HUD on top, isometric field in the middle, wooden tool bar at the bottom. Single daytime look by choice. */
+:root{
+  --sky:#a8dbee; --meadow:#d9efc4;
+  --grass:#7cbd4b; --grass2:#70b243; --soil:#8d5b34; --soil2:#6e4426; --furrow:#5f3a20; --fallow:#a77a4c;
+  --wood:#f7e7c6; --wood2:#ecd3a3; --wood-edge:#8a5a2b; --ink:#3b2716; --muted:#7a5e43;
+  --gold:#f3b80a; --gold-ink:#7a5600; --barn:#c4452f; --xp:#5aa9e6; --lock:#b9a586;
+  --font-display:'Sniglet','Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;
+  --font-body:'Nunito','Segoe UI',system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{background:var(--sky);color:var(--ink);font-family:var(--font-body);display:flex;flex-direction:column;overflow:hidden;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--barn);outline-offset:2px}
+
+.hud{display:flex;align-items:center;gap:8px;padding-block:8px;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));background:var(--wood);border-bottom:3px solid var(--wood-edge);z-index:50}
+.brand{font-family:var(--font-display);font-weight:800;font-size:1.15rem;color:var(--barn);white-space:nowrap;margin-right:auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.chip{display:flex;align-items:center;gap:6px;background:#fffaf0;border:2px solid var(--wood-edge);border-radius:999px;padding:3px 10px 3px 4px;font-weight:800;font-variant-numeric:tabular-nums}
+.coin{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe58a,var(--gold) 60%,#c98f00);border:1.5px solid var(--gold-ink);flex:none}
+.lvl{width:24px;height:24px;border-radius:50%;background:var(--xp);color:#fff;display:grid;place-items:center;font-family:var(--font-display);font-size:.85rem;border:1.5px solid #2f6f9f;flex:none}
+.xpbar{width:60px;height:8px;border-radius:5px;background:#e3d6bd;overflow:hidden}
+.xpbar i{display:block;height:100%;background:var(--xp);transition:width .3s}
+
+.field{flex:1;min-height:0;overflow:auto;background:linear-gradient(var(--sky) 0,var(--meadow) 45%);padding-block:12px 24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#board{position:relative;margin:0 auto;touch-action:none}
+.land,.edge{position:absolute;left:0;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.edge{background:var(--soil2)}
+.land{background:var(--grass2)}
+.tile{position:absolute;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);background:var(--grass);z-index:2}
+.tile.alt{background:var(--grass2)}
+.tile::after{content:"";position:absolute;inset:0;background:rgba(255,255,255,0);transition:background .12s}
+@media (hover:hover){.tile:hover::after{background:rgba(255,255,255,.22)}}
+.tile.plot{background:var(--soil) repeating-linear-gradient(-26.5deg,transparent 0 5px,var(--furrow) 5px 7px)}
+.tile.fallow{background:var(--fallow) repeating-linear-gradient(26.5deg,transparent 0 6px,rgba(90,60,30,.45) 6px 7px)}
+.tile.q::after{background:rgba(255,236,140,.45);animation:qpulse 1s ease-in-out infinite}
+.tile.sel::after{background:rgba(196,69,47,.35)}
+@keyframes qpulse{50%{background:rgba(255,236,140,.15)}}
+.spr{position:absolute;pointer-events:none}
+.spr svg{width:100%;height:100%;display:block;overflow:visible}
+.spr.ripe svg{animation:bob 1.6s ease-in-out infinite;transform-origin:50% 92%}
+.spr.anim svg{animation:sway 2.4s ease-in-out infinite;transform-origin:50% 90%}
+.spr .bubble{animation:bob 1.2s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+@keyframes bob{50%{transform:translateY(-3%) scale(1.03)}}
+@keyframes sway{25%{transform:rotate(-2deg)}75%{transform:rotate(2deg)}}
+
+.farmer{position:absolute;pointer-events:none}
+.farmer svg{width:100%;height:100%;display:block;overflow:visible}
+.farmer.flip svg{transform:scaleX(-1)}
+.farmer.walk .body{animation:step .26s ease-in-out infinite alternate}
+.farmer.walk .legL{animation:legA .26s linear infinite alternate}
+.farmer.walk .legR{animation:legA .26s linear infinite alternate-reverse}
+.farmer .tool{transform-box:view-box;transform-origin:27px 30px}
+.farmer.work .tool{animation:swing .3s ease-in-out infinite alternate}
+.farmer.work .body{animation:lean .3s ease-in-out infinite alternate}
+@keyframes step{to{transform:translateY(-1.6px)}}
+@keyframes legA{to{transform:translateY(-1.8px)}}
+@keyframes swing{from{transform:rotate(-35deg)}to{transform:rotate(25deg)}}
+@keyframes lean{to{transform:translateY(1.2px)}}
+.dust{position:absolute;pointer-events:none;width:14px;height:8px;border-radius:50%;background:rgba(140,100,60,.45);animation:puff .6s ease-out forwards}
+@keyframes puff{to{transform:translateY(-10px) scale(2.2);opacity:0}}
+
+.float{position:absolute;z-index:9999;pointer-events:none;font-family:var(--font-display);font-weight:800;font-size:.95rem;white-space:nowrap;transform:translate(-50%,0);animation:rise 1.1s ease-out forwards;text-shadow:0 1px 0 #fff,0 0 3px #fff}
+.float.coins{color:var(--gold-ink)}.float.xp{color:#2f6f9f}.float.bad{color:var(--barn)}
+@keyframes rise{to{transform:translate(-50%,-38px);opacity:0}}
+
+.hint{min-height:2.4em;display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;padding-block:4px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));background:#fffaf0;border-top:2px solid var(--wood2);font-weight:700;font-size:.9rem;color:var(--muted)}
+.hint button{border:2px solid var(--wood-edge);background:var(--wood);border-radius:999px;padding:2px 10px;font-weight:800;font-size:.8rem;flex:none}
+.tools{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding-block:8px calc(8px + env(safe-area-inset-bottom,0px));padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px));background:var(--wood);border-top:3px solid var(--wood-edge);z-index:50}
+.tool{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;background:#fffaf0;border:2px solid var(--wood2);border-radius:12px;font-weight:800;font-size:.75rem;min-width:0}
+.tool .ic{width:30px;height:30px}
+.tool .ic svg{width:100%;height:100%}
+.tool[aria-pressed="true"]{border-color:var(--barn);background:#ffe9d9;box-shadow:inset 0 -3px 0 var(--barn)}
+.tool span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.badge{position:absolute;top:-6px;right:-4px;background:var(--barn);color:#fff;border-radius:999px;font-size:.7rem;min-width:18px;height:18px;display:grid;place-items:center;padding:0 4px;border:2px solid #fffaf0}
+
+.sheet-wrap{position:fixed;inset:0;background:rgba(40,25,10,.35);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:560px;max-height:80%;display:flex;flex-direction:column;background:var(--wood);border:3px solid var(--wood-edge);border-bottom:0;border-radius:18px 18px 0 0;padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet h2{font-family:var(--font-display);font-weight:800;font-size:1.3rem;margin:0;color:var(--barn);text-wrap:balance}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px 6px}
+.x{border:2px solid var(--wood-edge);background:#fffaf0;border-radius:999px;padding:4px 12px;font-weight:800}
+.tabs{display:flex;gap:6px;padding:4px 12px;overflow-x:auto}
+.tabs button{flex:none;border:2px solid var(--wood2);background:#fffaf0;border-radius:999px;padding:4px 12px;font-weight:800;font-size:.85rem}
+.tabs button[aria-pressed="true"]{border-color:var(--barn);color:var(--barn)}
+.list{overflow:auto;padding:6px 12px 16px;display:grid;gap:8px}
+.item{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:10px;background:#fffaf0;border:2px solid var(--wood2);border-radius:14px;padding:8px 10px;text-align:left;width:100%}
+.item.on{border-color:var(--barn);box-shadow:inset 0 0 0 1px var(--barn)}
+.item.locked{opacity:.6;filter:grayscale(.6)}
+.item .pic{width:52px;height:52px;background:var(--grass);border-radius:10px;padding:3px}
+.item .pic.s{background:var(--soil)}
+.item b{font-family:var(--font-display);font-weight:800;font-size:1.05rem;display:block}
+.meta{font-size:.78rem;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums;line-height:1.35}
+.price{display:flex;align-items:center;gap:4px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.price .coin{width:16px;height:16px}
+.stars{color:var(--gold);letter-spacing:1px;font-size:.85rem}
+.stars .off{color:#d8c7a6}
+.note{font-size:.8rem;color:var(--muted);padding:0 16px 4px;font-weight:700}
+.big{margin:4px 0 0;border:2px solid var(--wood-edge);background:var(--barn);color:#fff;border-radius:12px;padding:10px 16px;font-weight:800;font-family:var(--font-display);font-size:1.05rem}
+.big:disabled{background:var(--lock);cursor:not-allowed}
+.rib{width:44px;height:52px}
+.prog{height:8px;border-radius:5px;background:#e3d6bd;overflow:hidden;margin-top:4px}
+.prog i{display:block;height:100%;background:var(--barn)}
+
+.modal{position:fixed;inset:0;z-index:300;display:grid;place-items:center;background:rgba(40,25,10,.4);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.card{background:var(--wood);border:3px solid var(--wood-edge);border-radius:20px;padding:20px 22px;text-align:center;max-width:340px;animation:pop .35s cubic-bezier(.3,1.6,.6,1)}
+.card h3{font-family:var(--font-display);font-weight:800;font-size:1.7rem;margin:0;color:var(--barn);text-wrap:balance}
+.card .sub{font-family:var(--font-display);color:#2f6f9f;font-size:1.1rem;margin-top:2px}
+.card p{margin:8px 0 12px;font-weight:700;color:var(--muted)}
+.card .gifts{display:flex;justify-content:center;gap:6px;margin:10px 0 4px;flex-wrap:wrap}
+.card .gifts span{width:52px;height:52px;background:var(--grass);border-radius:12px;padding:3px;position:relative}
+.card .gifts em{position:absolute;right:-4px;bottom:-4px;background:var(--barn);color:#fff;border-radius:999px;font-style:normal;font-size:.7rem;font-weight:800;padding:0 5px}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+.toast{position:fixed;left:50%;top:calc(64px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:250;background:#fffaf0;border:2px solid var(--wood-edge);border-radius:14px;padding:8px 14px;font-weight:800;display:flex;align-items:center;gap:8px;box-shadow:0 4px 0 rgba(0,0,0,.12);animation:pop .3s cubic-bezier(.3,1.6,.6,1);max-width:calc(100% - 32px)}
+.toast svg{width:26px;height:30px;flex:none}
+@media (prefers-reduced-motion:reduce){.spr svg,.spr .bubble,.card,.toast,.float,.farmer *{animation:none!important}.float{opacity:0}}
+</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+
+<header class="hud">
+  <div class="brand">Clover Hollow</div>
+  <div class="chip" title="Coins"><span class="coin"></span><span id="coins">0</span></div>
+  <button class="chip" id="lvlchip" title="Your level"><span class="lvl" id="lvl">1</span><span class="xpbar"><i id="xpfill"></i></span></button>
+</header>
+<main class="field" id="field"><div id="board"></div></main>
+<div class="hint" id="hint"></div>
+<nav class="tools" aria-label="Farm tools">
+  <button class="tool" id="t-hand" aria-pressed="true"><span class="ic" id="ic-hand"></span><span>Farm</span></button>
+  <button class="tool" id="t-market" aria-pressed="false"><span class="ic" id="ic-market"></span><span>Market</span></button>
+  <button class="tool" id="t-gift" aria-pressed="false"><span class="ic" id="ic-gift"></span><span>Gift Box</span><i class="badge" id="giftbadge" hidden></i></button>
+  <button class="tool" id="t-ribbons" aria-pressed="false"><span class="ic" id="ic-rib"></span><span>Ribbons</span></button>
+  <button class="tool" id="t-more" aria-pressed="false"><span class="ic" id="ic-more"></span><span id="morelabel">Tools</span></button>
+</nav>
+<div class="sheet-wrap" id="sheetwrap" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle">
+    <div class="sheet-head"><h2 id="sheettitle">Market</h2><button class="x" id="sheetclose">Close</button></div>
+    <div class="tabs" id="sheettabs" hidden></div>
+    <div class="note" id="sheetnote"></div>
+    <div class="list" id="sheetlist"></div>
+  </div>
+</div>
+<div class="modal" id="modal" hidden><div class="card"><h3 id="m-title"></h3><div class="sub" id="m-sub"></div><div class="gifts" id="m-gifts"></div><p id="m-text"></p><button class="big" id="m-ok">OK</button></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+const KEY='clover-hollow-v2';
+const PLOW_COST=15, WITHER_FACTOR=2.5, MASTERY_LEVEL=10, SPEED=4.2;
+const CROPS=[
+ {id:'sunpea',name:'Sunpea',lvl:1,cost:10,time:120,sell:30,xp:1,fruit:'#f6c51b',leaf:'#4f9a2f',shape:'round'},
+ {id:'bramble',name:'Bramblebean',lvl:1,cost:15,time:600,sell:48,xp:1,fruit:'#7b3fa0',leaf:'#3f8a3a',shape:'pod'},
+ {id:'glowroot',name:'Glowroot',lvl:3,cost:30,time:3600,sell:95,xp:2,fruit:'#ff8a3d',leaf:'#5aa83a',shape:'root'},
+ {id:'puffcorn',name:'Puffcorn',lvl:5,cost:45,time:4*3600,sell:160,xp:2,fruit:'#ffe7a0',leaf:'#6aa53a',shape:'tall'},
+ {id:'velvet',name:'Velvet Melon',lvl:8,cost:80,time:8*3600,sell:290,xp:3,fruit:'#e45b78',leaf:'#3f8a3a',shape:'melon'},
+ {id:'frostmint',name:'Frostmint',lvl:11,cost:60,time:12*3600,sell:330,xp:3,fruit:'#9fe6ee',leaf:'#2f8f74',shape:'leafy'},
+ {id:'ember',name:'Emberpepper',lvl:14,cost:120,time:16*3600,sell:520,xp:4,fruit:'#d8322a',leaf:'#4a8a2a',shape:'pod'},
+ {id:'cloud',name:'Cloudberry',lvl:17,cost:150,time:24*3600,sell:800,xp:5,fruit:'#f1ecff',leaf:'#4f9a5f',shape:'round'}
+];
+const ITEMS=[
+ {id:'blushapple',kind:'tree',name:'Blush Apple Tree',lvl:1,cost:150,time:8*3600,yield:35,xp:3,fruit:'#e2404f',leaf:'#4e9a34'},
+ {id:'sugarplum',kind:'tree',name:'Sugarplum Tree',lvl:2,cost:200,time:12*3600,yield:50,xp:4,fruit:'#7a3e9d',leaf:'#3f8a3a'},
+ {id:'honeyfig',kind:'tree',name:'Honeyfig Tree',lvl:3,cost:260,time:16*3600,yield:65,xp:5,fruit:'#a0632f',leaf:'#5aa83a'},
+ {id:'starpeach',kind:'tree',name:'Starpeach Tree',lvl:4,cost:320,time:24*3600,yield:95,xp:6,fruit:'#ffa56b',leaf:'#4f9a2f'},
+ {id:'mooncitrus',kind:'tree',name:'Mooncitrus Tree',lvl:7,cost:420,time:24*3600,yield:115,xp:8,fruit:'#ffe14d',leaf:'#3d8a3a'},
+ {id:'limeling',kind:'tree',name:'Limeling Tree',lvl:10,cost:600,time:48*3600,yield:230,xp:12,fruit:'#9bd34a',leaf:'#2f7f3a'},
+ {id:'hen',kind:'animal',name:'Speckled Hen',lvl:4,cost:350,time:12*3600,yield:30,xp:7,prod:'egg'},
+ {id:'cow',kind:'animal',name:'Bramble Cow',lvl:3,cost:600,time:24*3600,yield:75,xp:12,prod:'milk'},
+ {id:'sheep',kind:'animal',name:'Cloud Sheep',lvl:7,cost:500,time:24*3600,yield:60,xp:10,prod:'wool'},
+ {id:'pig',kind:'animal',name:'Truffle Pig',lvl:10,cost:800,time:24*3600,yield:95,xp:16,prod:'truffle'},
+ {id:'bunny',kind:'animal',name:'Clover Bunny',lvl:12,cost:450,time:12*3600,yield:40,xp:9,prod:'clover'},
+ {id:'duck',kind:'animal',name:'Puddle Duck',lvl:15,cost:520,time:12*3600,yield:45,xp:10,prod:'feather'},
+ {id:'hay',kind:'decor',name:'Hay Bale',lvl:1,cost:10,xp:1},
+ {id:'fence',kind:'decor',name:'Picket Fence',lvl:1,cost:20,xp:1},
+ {id:'flowers',kind:'decor',name:'Wildflower Patch',lvl:2,cost:40,xp:2},
+ {id:'scare',kind:'decor',name:'Scarecrow',lvl:4,cost:150,xp:6},
+ {id:'cart',kind:'decor',name:'Flower Cart',lvl:6,cost:250,xp:10}
+];
+const WELCOME={blushapple:1,hay:4,cow:1,hen:1};
+const TITLES=['Seedling','Sprout Tender','Weed Puller','Furrow Friend','Hay Hauler','Garden Keeper','Barn Helper','Orchard Hand','Field Steward','Harvest Hero','Soil Sage','Meadow Maker','Tractor Dreamer','Clover Captain','Hollow Homesteader','Barnyard Boss','Market Maven','Golden Grower','Prize Planter','Country Legend','Sunrise Rancher','Valley Elder','Bountiful Baron','Harvest Moon','Hollow Royalty'];
+const RIBBONS=[
+ {id:'plow',name:'Plow Pro',desc:'Plow plots',stat:'plow',tiers:[25,100,500,1500]},
+ {id:'plant',name:'Seed Sower',desc:'Plant crops',stat:'plant',tiers:[25,100,500,1500]},
+ {id:'harvest',name:'Full Basket',desc:'Harvest crops',stat:'harvest',tiers:[25,100,500,1500]},
+ {id:'tree',name:'Orchard Keeper',desc:'Collect from trees',stat:'tree',tiers:[10,50,200,600]},
+ {id:'animal',name:'Animal Friend',desc:'Collect from animals',stat:'animal',tiers:[10,50,200,600]},
+ {id:'decor',name:'Pretty Patch',desc:'Place decorations',stat:'decor',tiers:[5,25,100,250]},
+ {id:'earn',name:'Coin Counter',desc:'Earn coins',stat:'earned',tiers:[1000,10000,50000,250000]}
+];
+const TIER=[{n:'Yellow',c:'#f3c623',coins:100,xp:5},{n:'White',c:'#f4f1ea',coins:300,xp:15},{n:'Red',c:'#d8423a',coins:800,xp:40},{n:'Blue',c:'#3a78d8',coins:2000,xp:100}];
+const SIZES=[{n:8,cost:0,lvl:1},{n:10,cost:2000,lvl:5},{n:12,cost:10000,lvl:10},{n:14,cost:40000,lvl:16}];
+const MASTERY=[25,100,250];
+const C=Object.fromEntries(CROPS.map(c=>[c.id,c])), I=Object.fromEntries(ITEMS.map(d=>[d.id,d]));
+
+/* ---------- state ---------- */
+function fresh(){
+  const t={};
+  for(const [x,y] of [[3,3],[4,3],[5,3],[3,4],[4,4],[5,4]])t[x+','+y]={t:'plot'};
+  return {coins:200,xp:0,size:8,tiles:t,gift:{},sel:'sunpea',mastery:{},stats:{plow:0,plant:0,harvest:0,tree:0,animal:0,decor:0,earned:0},ribbons:{},farmer:{x:2,y:5},welcomed:false};
+}
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
+if(!S||!S.tiles)S=fresh();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+
+const T=L=>Math.round(5*Math.pow(L-1,2.4)); // total XP needed for level L
+function levelInfo(xp){let L=1;while(xp>=T(L+1))L++;return{L,into:xp-T(L),need:T(L+1)-T(L)}}
+const level=()=>levelInfo(S.xp).L;
+const title=L=>TITLES[L-1]||('Hollow Royalty '+(L-TITLES.length+1));
+
+/* ---------- drawing ---------- */
+function shade(hex,a){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;const f=v=>Math.max(0,Math.min(255,Math.round(v+a)));return'#'+[f(r),f(g),f(b)].map(v=>v.toString(16).padStart(2,'0')).join('')}
+const svg=(inner,vb='0 0 40 40')=>`<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
+const shadow='<ellipse cx="20" cy="36.5" rx="9" ry="2.2" fill="rgba(60,30,10,.25)"/>';
+function leaf(x,y,dir,len,col,wilt){const cx=x+dir*len*.55,rot=wilt?dir*35:dir*-25;return`<ellipse cx="${cx}" cy="${y}" rx="${len*.6}" ry="${len*.27}" fill="${col}" transform="rotate(${rot} ${x} ${y})"/>`}
+function fruit(c){
+  const F=c.fruit,dk=shade(F,-55),hl='rgba(255,255,255,.55)';
+  switch(c.shape){
+    case'round':return[[13.5,22],[26.5,20],[20,14]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="3.6" fill="${F}" stroke="${dk}" stroke-width=".8"/><circle cx="${x-1.1}" cy="${y-1.2}" r="1" fill="${hl}"/>`).join('');
+    case'pod':return`<ellipse cx="15" cy="25" rx="2.2" ry="5.8" fill="${F}" stroke="${dk}" stroke-width=".8" transform="rotate(18 15 25)"/><ellipse cx="25.5" cy="22" rx="2.2" ry="5.8" fill="${F}" stroke="${dk}" stroke-width=".8" transform="rotate(-18 25.5 22)"/><ellipse cx="20" cy="17" rx="1.8" ry="4.6" fill="${F}" stroke="${dk}" stroke-width=".8"/>`;
+    case'root':return`<circle cx="20" cy="31" r="10" fill="${F}" opacity=".22"/><ellipse cx="20" cy="33.5" rx="6.5" ry="4.2" fill="${F}" stroke="${dk}" stroke-width=".8"/><ellipse cx="18" cy="32" rx="2" ry="1" fill="${hl}"/>`;
+    case'tall':return`<ellipse cx="25" cy="17" rx="3.2" ry="6.5" fill="${F}" stroke="${dk}" stroke-width=".8"/><path d="M22 22 Q25 13 28 22" fill="${c.leaf}"/><ellipse cx="15.5" cy="22" rx="2.8" ry="5.5" fill="${F}" stroke="${dk}" stroke-width=".8"/><path d="M13 26 Q15.5 18 18 26" fill="${c.leaf}"/>`;
+    case'melon':return`<ellipse cx="20" cy="31" rx="10.5" ry="6.6" fill="${F}" stroke="${dk}" stroke-width=".9"/><path d="M12 29 Q20 26 28 29 M11 32 Q20 29.5 29.5 32" stroke="${dk}" stroke-width="1" fill="none" opacity=".6"/><ellipse cx="16" cy="28.5" rx="3" ry="1.3" fill="${hl}"/>`;
+    case'leafy':return[[14,20],[26,18],[20,12],[20,24]].map(([x,y])=>`<path d="M${x} ${y-4} L${x+1.2} ${y-1.2} L${x+4} ${y} L${x+1.2} ${y+1.2} L${x} ${y+4} L${x-1.2} ${y+1.2} L${x-4} ${y} L${x-1.2} ${y-1.2}Z" fill="${F}" stroke="${dk}" stroke-width=".6"/>`).join('');
+  }return''
+}
+function plantSVG(c,st){
+  const w=st==='w',lc=w?'#a9884e':c.leaf,sc=w?'#7d5f33':shade(c.leaf,-30);let g='';
+  if(st===0){g=`<ellipse cx="17.5" cy="33.5" rx="3" ry="1.6" fill="${lc}" transform="rotate(-30 17.5 33.5)"/><ellipse cx="22.5" cy="33.5" rx="3" ry="1.6" fill="${lc}" transform="rotate(30 22.5 33.5)"/>`}
+  else if(st===1){g=`<path d="M20 36 L20 27" stroke="${sc}" stroke-width="1.8" stroke-linecap="round"/>`+leaf(20,31,-1,6,lc)+leaf(20,29,1,6,lc)}
+  else{
+    const top=c.shape==='tall'?7:15;
+    g=w?`<path d="M20 36 Q22 26 29 24" stroke="${sc}" stroke-width="2" fill="none" stroke-linecap="round"/>`+leaf(21,32,-1,7,lc,1)+leaf(23,28,1,7,lc,1)+leaf(26,25,1,6,lc,1)
+       :`<path d="M20 36 L20 ${top}" stroke="${sc}" stroke-width="2" stroke-linecap="round"/>`+leaf(20,32,-1,8,lc)+leaf(20,29,1,8,lc)+leaf(20,24,-1,7,lc)+leaf(20,20,1,7,lc)+(c.shape==='tall'?leaf(20,13,-1,7,lc):'');
+  }
+  if(st==='r')g+=fruit(c);
+  return svg(shadow+g);
+}
+function treeSVG(it,ready){
+  const L=it.leaf,F=it.fruit;
+  const fr=ready?[[11,13],[19,6],[27,11],[15,19],[25,18],[21,13],[30,16]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="2.3" fill="${F}" stroke="${shade(F,-60)}" stroke-width=".6"/><circle cx="${x-.7}" cy="${y-.8}" r=".7" fill="rgba(255,255,255,.6)"/>`).join(''):'';
+  return svg(`<ellipse cx="20" cy="37" rx="12" ry="2.6" fill="rgba(60,30,10,.25)"/><path d="M18 37 L18.6 22 L21.4 22 L22 37Z" fill="#7a4b26"/><path d="M20 26 L15 21 M20 25 L25 20" stroke="#7a4b26" stroke-width="1.6"/><circle cx="20" cy="13" r="11" fill="${shade(L,-12)}"/><circle cx="13.5" cy="16" r="7.5" fill="${L}"/><circle cx="26" cy="11" r="7" fill="${shade(L,14)}"/><circle cx="19" cy="7" r="6" fill="${shade(L,8)}"/>${fr}`,'0 -6 40 46');
+}
+const PROD={
+  egg:'<ellipse cx="0" cy="0" rx="2.6" ry="3.3" fill="#fff4dc" stroke="#c9a46a" stroke-width=".6"/>',
+  milk:'<path d="M-2 -4 h4 v1.5 l1.2 1.5 v5.5 h-6.4 v-5.5 l1.2 -1.5z" fill="#fff" stroke="#8aa0b8" stroke-width=".6"/><rect x="-3.2" y="0" width="6.4" height="2" fill="#7fb3e8"/>',
+  wool:'<circle cx="-1.6" cy="0" r="2.2" fill="#fff" stroke="#c9c2b5" stroke-width=".5"/><circle cx="1.6" cy="-.5" r="2.4" fill="#fff" stroke="#c9c2b5" stroke-width=".5"/><circle cx="0" cy="1.6" r="2" fill="#fff" stroke="#c9c2b5" stroke-width=".5"/>',
+  truffle:'<circle cx="0" cy="0" r="3" fill="#5a3a22"/><circle cx="-1" cy="-1" r=".8" fill="#7a5638"/>',
+  clover:'<circle cx="-1.6" cy="-1" r="1.8" fill="#5aa83a"/><circle cx="1.6" cy="-1" r="1.8" fill="#5aa83a"/><circle cx="0" cy="1.4" r="1.8" fill="#4f9a2f"/>',
+  feather:'<path d="M-2.5 3 Q0 -4 3 -3.5 Q1.5 1 -2.5 3z" fill="#fff" stroke="#aab" stroke-width=".5"/>'
+};
+function animalBody(id){
+  switch(id){
+    case'hen':return`<ellipse cx="20" cy="36.5" rx="7" ry="1.8" fill="rgba(60,30,10,.25)"/><path d="M14 33 L14 36 M20 33 L20 36" stroke="#e8a33a" stroke-width="1.2"/><ellipse cx="17" cy="28" rx="8" ry="6" fill="#efe6d6" stroke="#a58b6b" stroke-width=".8"/><path d="M10 25 Q7 20 11 21 Q9 24 12 25z" fill="#d8cdb8"/><circle cx="24" cy="21" r="4.2" fill="#efe6d6" stroke="#a58b6b" stroke-width=".8"/><path d="M22.5 17.3 q1 -2 2 0 q1 -2 2 0 q.8 1 -1 1.6z" fill="#d8423a"/><path d="M28 21 l3 1 l-3 1z" fill="#f2b33a"/><circle cx="25.2" cy="20.5" r=".8" fill="#2a1b10"/>${[[14,27],[18,30],[19,25],[15,31]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r=".9" fill="#8a6a4a"/>`).join('')}`;
+    case'cow':return`<ellipse cx="20" cy="37" rx="12" ry="2.2" fill="rgba(60,30,10,.25)"/><path d="M11 30 v6 M15 31 v5 M24 31 v5 M28 30 v6" stroke="#4a3a30" stroke-width="2.2" stroke-linecap="round"/><ellipse cx="19" cy="26" rx="11" ry="6.5" fill="#f6f1ea" stroke="#5a4636" stroke-width=".8"/><path d="M13 22 q4 -2 5 2 q-2 4 -6 2z M22 27 q4 -2 6 1 q-2 3 -6 1z" fill="#3a2e28"/><ellipse cx="31" cy="21" rx="4.5" ry="4" fill="#f6f1ea" stroke="#5a4636" stroke-width=".8"/><ellipse cx="33.5" cy="23" rx="2.8" ry="2" fill="#f2b8b0"/><path d="M28 17.5 l-1.5 -2.5 M33 17.5 l1.5 -2.5" stroke="#c9a46a" stroke-width="1.4" stroke-linecap="round"/><circle cx="30.5" cy="20" r=".8" fill="#2a1b10"/><path d="M8 24 q-3 4 -1 7" stroke="#5a4636" stroke-width="1" fill="none"/>`;
+    case'sheep':return`<ellipse cx="20" cy="37" rx="11" ry="2.2" fill="rgba(60,30,10,.25)"/><path d="M13 31 v5 M17 32 v4 M23 32 v4 M27 31 v5" stroke="#3a3330" stroke-width="2" stroke-linecap="round"/>${[[12,26],[16,22],[21,21],[26,23],[14,30],[20,30],[25,29],[19,26]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="4.6" fill="#fbf8f2" stroke="#d6cdbd" stroke-width=".6"/>`).join('')}<ellipse cx="30.5" cy="23" rx="3.6" ry="4.4" fill="#3a3330"/><ellipse cx="28" cy="21" rx="1.8" ry="1" fill="#3a3330" transform="rotate(-30 28 21)"/><circle cx="31.5" cy="22" r=".7" fill="#fff"/>`;
+    case'pig':return`<ellipse cx="20" cy="37" rx="11" ry="2.2" fill="rgba(60,30,10,.25)"/><path d="M13 31 v5 M17 32 v4 M24 32 v4 M28 31 v5" stroke="#d98c94" stroke-width="2.4" stroke-linecap="round"/><ellipse cx="20" cy="27" rx="11" ry="7" fill="#f6b8bf" stroke="#c97a84" stroke-width=".8"/><ellipse cx="31" cy="26" rx="3" ry="3.4" fill="#f09aa5" stroke="#c97a84" stroke-width=".7"/><circle cx="30.4" cy="25.6" r=".6" fill="#7a3a44"/><circle cx="31.8" cy="26.6" r=".6" fill="#7a3a44"/><path d="M26 20 l1 -3 l2 3z" fill="#f09aa5"/><circle cx="27.5" cy="23" r=".8" fill="#2a1b10"/><path d="M9 25 q-3 -1 -2 2 q1 2 -1 2" stroke="#c97a84" stroke-width=".9" fill="none"/>`;
+    case'bunny':return`<ellipse cx="20" cy="37" rx="8" ry="1.8" fill="rgba(60,30,10,.25)"/><ellipse cx="18" cy="31" rx="8" ry="5.5" fill="#cfc4b8" stroke="#8f8274" stroke-width=".8"/><circle cx="11" cy="30" r="2.2" fill="#fff"/><circle cx="24.5" cy="26" r="4.3" fill="#cfc4b8" stroke="#8f8274" stroke-width=".8"/><ellipse cx="23" cy="17" rx="1.6" ry="5.5" fill="#cfc4b8" stroke="#8f8274" stroke-width=".7" transform="rotate(-10 23 17)"/><ellipse cx="26.5" cy="17.5" rx="1.6" ry="5.3" fill="#cfc4b8" stroke="#8f8274" stroke-width=".7" transform="rotate(12 26.5 17.5)"/><ellipse cx="26.5" cy="17.5" rx=".7" ry="3.6" fill="#f2b8b0" transform="rotate(12 26.5 17.5)"/><circle cx="26" cy="25.5" r=".8" fill="#2a1b10"/><circle cx="28.6" cy="27" r=".7" fill="#e88a95"/>`;
+    case'duck':return`<ellipse cx="20" cy="36" rx="12" ry="3" fill="#8fc8e8" opacity=".7"/><ellipse cx="18" cy="31" rx="9" ry="5.5" fill="#fbf8f2" stroke="#b9b2a5" stroke-width=".8"/><path d="M10 29 l-3 -3 l1 5z" fill="#fbf8f2" stroke="#b9b2a5" stroke-width=".6"/><path d="M13 30 q5 3 9 0" stroke="#d6cdbd" stroke-width="1" fill="none"/><circle cx="25" cy="23" r="4.2" fill="#fbf8f2" stroke="#b9b2a5" stroke-width=".8"/><path d="M28.5 23 l4 .8 l-4 1.5z" fill="#f2a03a"/><circle cx="26.2" cy="22.2" r=".8" fill="#2a1b10"/>`;
+  }return''
+}
+function animalSVG(it,ready){
+  const b=ready?`<g class="bubble"><path d="M27 2 h10 a3 3 0 0 1 3 3 v6 a3 3 0 0 1 -3 3 h-3 l-2 3 l-1 -3 h-4 a3 3 0 0 1 -3 -3 v-6 a3 3 0 0 1 3 -3z" fill="#fffaf0" stroke="#8a5a2b" stroke-width=".8"/><g transform="translate(32 8)">${PROD[it.prod]}</g></g>`:'';
+  return svg(animalBody(it.id)+b,'0 0 40 40');
+}
+const DECOR_SVG={
+  hay:svg(shadow+`<path d="M8 24 Q20 19 32 24 L32 34 Q20 38 8 34Z" fill="#e8c35a" stroke="#a9832a" stroke-width="1"/><path d="M8 24 Q20 29 32 24" fill="none" stroke="#a9832a" stroke-width="1"/><path d="M14 27 L14 36 M26 27 L26 36" stroke="#b33b2a" stroke-width="1.4"/><path d="M11 30 l2 1 M18 31 l2 -1 M22 33 l2 1 M28 30 l1 1" stroke="#a9832a" stroke-width=".8"/>`),
+  fence:svg(`<g fill="#fffdf6" stroke="#9a8a6a" stroke-width=".8">${[8,14,20,26,32].map(x=>`<path d="M${x-2} 34 L${x-2} 20 L${x} 17 L${x+2} 20 L${x+2} 34Z"/>`).join('')}<rect x="5" y="23" width="30" height="2.6"/><rect x="5" y="29" width="30" height="2.6"/></g>`),
+  flowers:svg(shadow+`<g>${[[12,30,'#f45b8f'],[19,27,'#ffd23f'],[26,30,'#8a6cf0'],[16,34,'#ff8a3d'],[24,34,'#f45b8f'],[29,26,'#fff']].map(([x,y,c])=>`<path d="M${x} 36 L${x} ${y}" stroke="#3f8a2f" stroke-width="1.2"/><circle cx="${x}" cy="${y}" r="2.8" fill="${c}" stroke="rgba(0,0,0,.2)" stroke-width=".5"/><circle cx="${x}" cy="${y}" r="1" fill="#f3b80a"/>`).join('')}</g>`),
+  scare:svg(shadow+`<path d="M20 36 L20 12" stroke="#7a4b26" stroke-width="2.2"/><path d="M10 19 L30 19" stroke="#7a4b26" stroke-width="2"/><path d="M14 18 L26 18 L27 29 L13 29Z" fill="#4f7fc4" stroke="#2f4f80" stroke-width=".8"/><circle cx="20" cy="12" r="4.2" fill="#e8c35a" stroke="#a9832a" stroke-width=".8"/><path d="M13 9 L27 9 L24 7 L22 2 L18 2 L16 7Z" fill="#8a5a2b"/><path d="M18 22 l1 2 M22 23 l-1 2" stroke="#e8c35a" stroke-width="1.2"/>`),
+  cart:svg(shadow+`<rect x="9" y="22" width="22" height="9" rx="1.5" fill="#c4452f" stroke="#7a2a1c" stroke-width=".8"/><path d="M31 25 L37 21" stroke="#7a4b26" stroke-width="1.6"/><circle cx="13" cy="33" r="3.2" fill="#fffaf0" stroke="#7a4b26" stroke-width="1.2"/><circle cx="27" cy="33" r="3.2" fill="#fffaf0" stroke="#7a4b26" stroke-width="1.2"/>${[[12,20,'#f45b8f'],[16,18,'#ffd23f'],[20,19,'#8a6cf0'],[24,18,'#fff'],[28,20,'#ff8a3d'],[18,21,'#5aa83a'],[26,21,'#5aa83a']].map(([x,y,c])=>`<circle cx="${x}" cy="${y}" r="2.6" fill="${c}" stroke="rgba(0,0,0,.2)" stroke-width=".5"/>`).join('')}`)
+};
+function itemSVG(id,ready){const it=I[id];return it.kind==='tree'?treeSVG(it,ready):it.kind==='animal'?animalSVG(it,ready):DECOR_SVG[id]}
+const FARMER_SVG=svg(`<ellipse cx="20" cy="56" rx="8" ry="2" fill="rgba(60,30,10,.28)"/>
+<g class="legL"><rect x="14.5" y="40" width="4.6" height="12" rx="1.5" fill="#3f6ea8"/><rect x="13.6" y="50.5" width="6.2" height="4.4" rx="1.6" fill="#5a3a22"/></g>
+<g class="legR"><rect x="20.9" y="40" width="4.6" height="12" rx="1.5" fill="#3f6ea8"/><rect x="20.2" y="50.5" width="6.2" height="4.4" rx="1.6" fill="#5a3a22"/></g>
+<g class="body">
+<rect x="12" y="24" width="16" height="18" rx="5" fill="#d8423a"/>
+<path d="M12.5 30 h15 M12.5 35 h15 M17 24.5 v17 M23 24.5 v17" stroke="#a82f28" stroke-width=".8" opacity=".7"/>
+<path d="M13.5 31 h13 v9 a3 3 0 0 1 -3 3 h-7 a3 3 0 0 1 -3 -3z" fill="#4f7fc4"/>
+<path d="M15 31 l-1 -7 M25 31 l1 -7" stroke="#4f7fc4" stroke-width="2"/>
+<circle cx="15" cy="32.5" r=".9" fill="#f3b80a"/><circle cx="25" cy="32.5" r=".9" fill="#f3b80a"/>
+<rect x="9" y="25" width="4" height="11" rx="2" fill="#d8423a"/><circle cx="11" cy="37" r="2" fill="#f2c39b"/>
+<circle cx="20" cy="17" r="6.6" fill="#f2c39b"/>
+<circle cx="22.5" cy="16.5" r=".9" fill="#3b2716"/><path d="M21 20 q1.6 1 3 0" stroke="#a5583a" stroke-width=".8" fill="none"/><circle cx="24.4" cy="18.6" r="1.2" fill="#f0a08a" opacity=".7"/>
+<path d="M13 15 q0 -4 7 -4.5 q7 .5 7 4.5z" fill="#7a4b26" opacity=".35"/>
+<ellipse cx="20" cy="12.5" rx="11.5" ry="2.8" fill="#e8c35a" stroke="#a9832a" stroke-width=".7"/>
+<path d="M14 12.5 q0 -7 6 -7 q6 0 6 7z" fill="#f0cf6a" stroke="#a9832a" stroke-width=".7"/>
+<path d="M14.2 11 h11.6" stroke="#c4452f" stroke-width="1.6"/>
+</g>
+<g class="tool"><path d="M27 30 L36 18" stroke="#8a5a2b" stroke-width="2" stroke-linecap="round"/><path d="M34 16 l5 3 l-2 2 l-4 -2z" fill="#9aa3ad" stroke="#5c646c" stroke-width=".6"/><circle cx="27" cy="31" r="2" fill="#f2c39b"/></g>`,'0 0 40 58');
+const ICON={
+  hand:svg(`<path d="M10 33 L26 9" stroke="#8a5a2b" stroke-width="3" stroke-linecap="round"/><path d="M22 10 Q30 4 34 12 Q29 11 26 16Z" fill="#9aa3ad" stroke="#5c646c" stroke-width="1"/><path d="M8 34 Q14 28 22 34" fill="#8d5b34"/>`),
+  market:svg(`<path d="M6 16 L20 6 L34 16Z" fill="#c4452f" stroke="#7a2a1c" stroke-width="1.2"/><rect x="8" y="16" width="24" height="18" fill="#f7e7c6" stroke="#8a5a2b" stroke-width="1.2"/><path d="M8 16 h24 v4 q-3 3 -6 0 q-3 3 -6 0 q-3 3 -6 0 q-3 3 -6 0z" fill="#fffaf0" stroke="#c4452f" stroke-width="1"/><rect x="16" y="24" width="8" height="10" fill="#8a5a2b"/>`),
+  gift:svg(`<rect x="7" y="16" width="26" height="18" rx="2" fill="#5aa9e6" stroke="#2f6f9f" stroke-width="1.2"/><rect x="5" y="12" width="30" height="6" rx="2" fill="#7fbdf0" stroke="#2f6f9f" stroke-width="1.2"/><rect x="18" y="12" width="4" height="22" fill="#f3b80a"/><path d="M20 12 Q12 4 13 10 Q14 13 20 12 Q28 4 27 10 Q26 13 20 12" fill="#f3b80a" stroke="#b98500" stroke-width="1"/>`),
+  more:svg(`<circle cx="10" cy="20" r="3.5" fill="#8a5a2b"/><circle cx="20" cy="20" r="3.5" fill="#8a5a2b"/><circle cx="30" cy="20" r="3.5" fill="#8a5a2b"/>`),
+  move:svg(`<path d="M20 5 L20 35 M5 20 L35 20" stroke="#8a5a2b" stroke-width="3" stroke-linecap="round"/><path d="M20 3 l-5 6 h10z M20 37 l-5 -6 h10z M3 20 l6 -5 v10z M37 20 l-6 -5 v10z" fill="#8a5a2b"/>`),
+  del:svg(`<path d="M10 12 h20 l-2 22 h-16z" fill="#f7e7c6" stroke="#8a5a2b" stroke-width="1.5"/><path d="M8 12 h24 M16 12 v-4 h8 v4 M16 17 v13 M24 17 v13" stroke="#8a5a2b" stroke-width="1.5" fill="none"/>`),
+  expand:svg(`<path d="M20 4 L36 20 L20 36 L4 20Z" fill="#7cbd4b" stroke="#4f8a2f" stroke-width="1.5"/><path d="M20 12 L20 28 M12 20 L28 20" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>`)
+};
+function ribbonSVG(color,dim){return svg(`<g opacity="${dim?.35:1}"><path d="M14 22 L8 44 L14 40 L18 46 L22 26Z M26 22 L32 44 L26 40 L22 46 L18 26Z" fill="${color}" stroke="rgba(0,0,0,.25)" stroke-width=".8"/><circle cx="20" cy="16" r="12" fill="${color}" stroke="rgba(0,0,0,.25)" stroke-width="1"/><circle cx="20" cy="16" r="8" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.4" stroke-dasharray="2 1.6"/></g>`,'0 0 40 48')}
+
+/* ---------- board ---------- */
+const board=document.getElementById('board'),field=document.getElementById('field');
+let W=48,H=24,HEAD=48,els={},keys={},farmerEl;
+function layout(){
+  const n=S.size,avail=field.clientWidth-32;
+  W=Math.max(26,Math.min(72,Math.floor(avail/n)));H=W/2;HEAD=W*1.25;
+  board.style.width=n*W+'px';board.style.height=(n*H+HEAD+8)+'px';
+  board.innerHTML=`<div class="edge" style="top:${HEAD+6}px;width:${n*W}px;height:${n*H}px"></div><div class="land" style="top:${HEAD}px;width:${n*W}px;height:${n*H}px"></div>`;
+  els={};keys={};
+  for(let x=0;x<n;x++)for(let y=0;y<n;y++){
+    const L=(x-y+n-1)*W/2,Tp=(x+y)*H/2+HEAD;
+    const t=document.createElement('div');t.className='tile';t.dataset.k=x+','+y;
+    t.style.cssText=`left:${L}px;top:${Tp}px;width:${W}px;height:${H}px`;
+    const s=document.createElement('div');s.className='spr';
+    s.style.cssText=`left:${L+W*.04}px;top:${Tp+H*.72-W*.92}px;width:${W*.92}px;height:${W*.92}px;z-index:${100+(x+y)*10}`;
+    board.append(t,s);els[x+','+y]={t,s,alt:(x+y)%2};
+  }
+  farmerEl=document.createElement('div');farmerEl.className='farmer';farmerEl.innerHTML=FARMER_SVG;board.append(farmerEl);
+  placeFarmer();paintAll();
+}
+const screen=(fx,fy)=>({x:(fx-fy+S.size-1)*W/2+W/2,y:(fx+fy)*H/2+HEAD+H/2});
+function placeFarmer(){
+  const fw=W*.62,fh=fw*1.45,p=screen(S.farmer.x,S.farmer.y);
+  farmerEl.style.cssText=`left:${p.x-fw/2}px;top:${p.y-fh*.95}px;width:${fw}px;height:${fh}px;z-index:${Math.round(100+(S.farmer.x+S.farmer.y)*10+5)}`;
+}
+function stageOf(tile,now){
+  const c=C[tile.crop],p=(now-tile.planted)/(c.time*1000);
+  return p>=WITHER_FACTOR?'w':p>=1?'r':Math.min(2,Math.floor(p*3));
+}
+const readyAt=tile=>tile.last+I[tile.item].time*1000;
+function paint(k,now){
+  const e=els[k];if(!e)return;const tile=S.tiles[k];let key='g',cls='tile'+(e.alt?' alt':''),html='',sc='';
+  if(tile){
+    if(tile.t==='plot'){key='p';cls='tile plot'}
+    else if(tile.t==='fallow'){key='f';cls='tile fallow'}
+    else if(tile.t==='crop'){const st=stageOf(tile,now);key='c'+tile.crop+st;cls='tile plot';html=plantSVG(C[tile.crop],st);if(st==='r')sc='ripe'}
+    else if(tile.t==='item'){const it=I[tile.item];const r=it.kind!=='decor'&&now>=readyAt(tile);key='i'+tile.item+r;html=itemSVG(tile.item,r);if(it.kind==='animal')sc='anim';else if(r)sc='ripe'}
+  }
+  if(qcount[k])cls+=' q';
+  if(moveSel===k)cls+=' sel';
+  if(keys[k]===key+cls)return;keys[k]=key+cls;
+  e.t.className=cls;
+  if(e.s.dataset.key!==key){e.s.innerHTML=html;e.s.dataset.key=key}
+  e.s.className='spr '+sc;
+}
+function paintAll(){const now=Date.now();for(const k in els)paint(k,now)}
+
+/* ---------- HUD ---------- */
+function hud(){
+  document.getElementById('coins').textContent=S.coins.toLocaleString();
+  const li=levelInfo(S.xp);document.getElementById('lvl').textContent=li.L;
+  document.getElementById('xpfill').style.width=(100*li.into/li.need)+'%';
+  const g=Object.values(S.gift).reduce((a,b)=>a+b,0),gb=document.getElementById('giftbadge');gb.hidden=!g;gb.textContent=g;
+  document.getElementById('t-hand').setAttribute('aria-pressed',String(mode==='hand'));
+  document.getElementById('t-more').setAttribute('aria-pressed',String(mode==='move'||mode==='delete'));
+  document.getElementById('ic-more').innerHTML=mode==='move'?ICON.move:mode==='delete'?ICON.del:ICON.more;
+  document.getElementById('morelabel').textContent=mode==='move'?'Move':mode==='delete'?'Delete':'Tools';
+}
+document.getElementById('ic-hand').innerHTML=ICON.hand;
+document.getElementById('ic-market').innerHTML=ICON.market;
+document.getElementById('ic-gift').innerHTML=ICON.gift;
+document.getElementById('ic-rib').innerHTML=ribbonSVG('#f3c623');
+const hintEl=document.getElementById('hint');
+function hint(t,btn){hintEl.innerHTML='';hintEl.append(t);if(btn){const b=document.createElement('button');b.textContent=btn[0];b.onclick=btn[1];hintEl.append(b)}}
+function fmt(s){s=Math.max(0,Math.ceil(s));if(s<60)return s+'s';const m=Math.floor(s/60);if(m<60)return m+'m'+(s%60?' '+s%60+'s':'');const h=Math.floor(m/60);return h+'h'+(m%60?' '+m%60+'m':'')}
+function floatAt(k,text,cls,dy=0){
+  const [x,y]=k.split(',').map(Number),p=screen(x,y);
+  const f=document.createElement('div');f.className='float '+cls;f.textContent=text;
+  f.style.left=p.x+'px';f.style.top=(p.y-W*.75+dy)+'px';
+  board.append(f);setTimeout(()=>f.remove(),1150);
+}
+let toastT;
+function toast(html){const t=document.getElementById('toast');t.innerHTML=html;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3200)}
+function gain(k,coins,xp){
+  const before=level();S.coins+=coins;S.xp+=xp;
+  if(coins>0)bump('earned',coins);
+  if(coins&&k)floatAt(k,(coins>0?'+':'')+coins,coins>0?'coins':'bad');
+  if(xp&&k)floatAt(k,'+'+xp+' XP','xp',16);
+  hud();const after=level();if(after>before)levelUp(after);
+}
+function bump(stat,n=1){
+  S.stats[stat]=(S.stats[stat]||0)+n;
+  for(const r of RIBBONS){if(r.stat!==stat)continue;const have=S.ribbons[r.id]||0;
+    if(have<4&&S.stats[stat]>=r.tiers[have]){S.ribbons[r.id]=have+1;const t=TIER[have];
+      setTimeout(()=>{toast(ribbonSVG(t.c)+`<span>${t.n} ribbon: ${r.name}! +${t.coins} coins</span>`);gain(null,t.coins,t.xp)},400)}}
+}
+function showModal(title,sub,text,gifts,btn,cb){
+  document.getElementById('m-title').textContent=title;document.getElementById('m-sub').textContent=sub||'';
+  document.getElementById('m-text').textContent=text;document.getElementById('m-gifts').innerHTML=gifts||'';
+  const ok=document.getElementById('m-ok');ok.textContent=btn||'OK';ok.onclick=()=>{document.getElementById('modal').hidden=true;cb&&cb()};
+  document.getElementById('modal').hidden=false;
+}
+function levelUp(L){
+  const un=[...CROPS.filter(c=>c.lvl===L).map(c=>c.name),...ITEMS.filter(d=>d.lvl===L).map(d=>d.name),...SIZES.filter(s=>s.lvl===L&&s.cost).map(s=>`a ${s.n}×${s.n} farm`)];
+  if(L===MASTERY_LEVEL)un.push('crop mastery');
+  showModal('Level '+L+'!',title(L),un.length?'New in the market: '+un.join(', ')+'.':'Keep it up, farmer!','','Back to the farm');
+}
+
+/* ---------- farmer & action queue ---------- */
+let queue=[],cur=null,reserved=0,qcount={},proj={},mode='hand',placeId=null,moveSel=null,raf=0;
+const WALK={plow:{dur:800,dust:1},plant:{dur:450},harvest:{dur:450},collect:{dur:500}};
+function stateOf(k){
+  if(proj[k])return proj[k];
+  const t=S.tiles[k];if(!t)return'grass';
+  if(t.t==='crop'){const st=stageOf(t,Date.now());return st==='w'?'withered':st==='r'?'ripe':'growing'}
+  if(t.t==='item'){const it=I[t.item];return it.kind==='decor'?'decor':Date.now()>=readyAt(t)?'ready':'waiting'}
+  return t.t;
+}
+function intent(k){
+  const s=stateOf(k);
+  return {grass:'plow',fallow:'plow',withered:'plow',plot:'plant',ripe:'harvest',ready:'collect'}[s]||'info';
+}
+const AFTER={plow:'plot',plant:'growing',harvest:'fallow',collect:'waiting'};
+function enqueue(k,kind){
+  let cost=0,crop=null;
+  if(kind==='plow')cost=PLOW_COST;
+  if(kind==='plant'){crop=S.sel;cost=C[crop].cost}
+  if(S.coins-reserved<cost){floatAt(k,'Need coins','bad');hint(kind==='plow'?`Plowing costs ${PLOW_COST} coins. Harvest something first.`:`${C[crop].name} seeds cost ${cost} coins.`);return false}
+  reserved+=cost;queue.push({k,kind,cost,crop});qcount[k]=(qcount[k]||0)+1;proj[k]=AFTER[kind];
+  paint(k,Date.now());if(!raf)raf=requestAnimationFrame(step);return true;
+}
+let workUntil=0,last=0;
+function step(t){
+  raf=0;const dt=last?Math.min(50,t-last)/1000:0;last=t;
+  if(!cur&&queue.length){cur=queue.shift();const [x,y]=cur.k.split(',').map(Number);cur.tx=x-.05;cur.ty=y+.62;cur.phase='walk'}
+  if(cur){
+    if(cur.phase==='walk'){
+      const dx=cur.tx-S.farmer.x,dy=cur.ty-S.farmer.y,d=Math.hypot(dx,dy),mv=SPEED*dt;
+      farmerEl.classList.add('walk');farmerEl.classList.remove('work');
+      const sx=dx-dy;if(Math.abs(sx)>.02)farmerEl.classList.toggle('flip',sx<0);
+      if(d<=mv||d<.01){S.farmer.x=cur.tx;S.farmer.y=cur.ty;cur.phase='work';workUntil=t+WALK[cur.kind].dur;farmerEl.classList.remove('walk','flip');farmerEl.classList.add('work');if(WALK[cur.kind].dust)dust(cur.k)}
+      else{S.farmer.x+=dx/d*mv;S.farmer.y+=dy/d*mv}
+      placeFarmer();
+    }else if(t>=workUntil){finish(cur);cur=null;farmerEl.classList.remove('work')}
+  }
+  if(cur||queue.length)raf=requestAnimationFrame(step);else{last=0;save()}
+}
+function dust(k){const [x,y]=k.split(',').map(Number),p=screen(x,y);for(let i=0;i<3;i++){const d=document.createElement('div');d.className='dust';d.style.left=(p.x-7+(i-1)*W*.18)+'px';d.style.top=(p.y-4)+'px';d.style.zIndex=9000;d.style.animationDelay=i*90+'ms';board.append(d);setTimeout(()=>d.remove(),800)}}
+function finish(job){
+  const {k,kind}=job,tile=S.tiles[k],now=Date.now();
+  reserved-=job.cost;qcount[k]--;if(!qcount[k]){delete qcount[k];delete proj[k]}
+  const s=(()=>{const t=S.tiles[k];if(!t)return'grass';if(t.t==='crop'){const st=stageOf(t,now);return st==='w'?'withered':st==='r'?'ripe':'growing'}if(t.t==='item'){const it=I[t.item];return it.kind==='decor'?'decor':now>=readyAt(t)?'ready':'waiting'}return t.t})();
+  if(kind==='plow'&&['grass','fallow','withered'].includes(s)){
+    if(S.coins<PLOW_COST){floatAt(k,'Need coins','bad')}else{S.tiles[k]={t:'plot'};gain(k,-PLOW_COST,1);bump('plow')}}
+  else if(kind==='plant'&&s==='plot'){const c=C[job.crop];
+    if(S.coins<c.cost){floatAt(k,'Need coins','bad')}else{S.tiles[k]={t:'crop',crop:c.id,planted:now};gain(k,-c.cost,c.xp);bump('plant')}}
+  else if(kind==='harvest'&&s==='ripe'){const c=C[tile.crop];
+    let st=0;if(level()>=MASTERY_LEVEL){st=stars(c.id);S.mastery[c.id]=(S.mastery[c.id]||0)+1}
+    const coins=Math.round(c.sell*(1+.1*st));S.tiles[k]={t:'fallow'};gain(k,coins,0);bump('harvest');
+    const ns=stars(c.id);if(ns>st)toast(svg(fruit(c))+`<span>${c.name} mastery ${'★'.repeat(ns)}! +${10*ns}% coins</span>`)}
+  else if(kind==='collect'&&s==='ready'){const it=I[tile.item];tile.last=now;gain(k,it.yield,0);bump(it.kind)}
+  paint(k,now);
+}
+function stars(id){const n=S.mastery[id]||0;return MASTERY.filter(m=>n>=m).length}
+
+function info(k){
+  const tile=S.tiles[k],now=Date.now();if(!tile)return;
+  if(qcount[k]){hint('Your farmer is on the way.');return}
+  if(tile.t==='crop'){const c=C[tile.crop];hint(`${c.name} · ready in ${fmt(c.time-(now-tile.planted)/1000)}`)}
+  else if(tile.t==='item'){const it=I[tile.item];hint(it.kind==='decor'?it.name+'.':`${it.name} · ready in ${fmt((readyAt(tile)-now)/1000)}`)}
+}
+function placeOn(k){
+  if(S.tiles[k]||qcount[k]){hint('Pick an empty grass spot.');return false}
+  if(mode==='gift'){
+    S.tiles[k]={t:'item',item:placeId,last:Date.now()};S.gift[placeId]--;if(I[placeId].kind==='decor')bump('decor');
+    if(!S.gift[placeId]){delete S.gift[placeId];setMode('hand');hint('Placed! Open the Gift Box for anything else.')}
+    paint(k,Date.now());hud();save();return true}
+  const it=I[placeId];
+  if(S.coins<it.cost){floatAt(k,'Need coins','bad');hint(it.name+' costs '+it.cost+' coins.');return false}
+  S.tiles[k]={t:'item',item:it.id,last:Date.now()};gain(k,-it.cost,it.xp);if(it.kind==='decor')bump('decor');
+  paint(k,Date.now());save();return true;
+}
+function setMode(m,id){mode=m;placeId=id||null;if(moveSel){const o=moveSel;moveSel=null;keys[o]=null;paint(o,Date.now())}hud()}
+
+/* ---------- input ---------- */
+let drag=null;
+function tileAt(e){const el=document.elementFromPoint(e.clientX,e.clientY);return el&&el.classList&&el.classList.contains('tile')?el.dataset.k:null}
+function tap(k,dragKind){
+  if(mode==='hand'){const kind=intent(k);if(dragKind&&kind!==dragKind)return null;if(kind==='info'){if(!dragKind)info(k);return'info'}enqueue(k,kind);return kind}
+  if(mode==='place'||mode==='gift'){if(dragKind&&dragKind!=='place')return null;return placeOn(k)?'place':null}
+  if(mode==='delete'){const t=S.tiles[k];if(!t||qcount[k])return null;delete S.tiles[k];keys[k]=null;paint(k,Date.now());save();return'delete'}
+  if(mode==='move'&&!dragKind){
+    if(!moveSel){if(!S.tiles[k]||qcount[k]){hint('Tap something to move first.');return null}moveSel=k;keys[k]=null;paint(k,Date.now());hint('Now tap an empty grass spot.',['Cancel',()=>setMode('hand')]);return null}
+    if(k===moveSel){setMode('move');hint('Tap something to move.',['Done',()=>setMode('hand')]);return null}
+    if(S.tiles[k]||qcount[k]){hint('That spot is taken. Pick empty grass.');return null}
+    S.tiles[k]=S.tiles[moveSel];delete S.tiles[moveSel];const o=moveSel;moveSel=null;keys[o]=null;keys[k]=null;paint(o,Date.now());paint(k,Date.now());save();
+    hint('Moved! Tap something else to move.',['Done',()=>setMode('hand')]);return null}
+  return null;
+}
+board.addEventListener('pointerdown',e=>{const k=tileAt(e);if(!k)return;e.preventDefault();const kind=tap(k,null);drag=kind&&kind!=='info'?{kind,done:new Set([k])}:null});
+window.addEventListener('pointermove',e=>{if(!drag)return;const k=tileAt(e);if(!k||drag.done.has(k))return;drag.done.add(k);tap(k,drag.kind)});
+window.addEventListener('pointerup',()=>drag=null);window.addEventListener('pointercancel',()=>drag=null);
+
+/* ---------- sheets ---------- */
+const wrap=document.getElementById('sheetwrap'),list=document.getElementById('sheetlist'),tabsEl=document.getElementById('sheettabs');
+const coin=n=>`<span class="price"><span class="coin"></span>${n.toLocaleString()}</span>`;
+function starHTML(id){const s=stars(id);return`<span class="stars">${'★'.repeat(s)}<span class="off">${'★'.repeat(3-s)}</span></span>`}
+function sheet(title,note){document.getElementById('sheettitle').textContent=title;document.getElementById('sheetnote').textContent=note||'';tabsEl.hidden=true;wrap.hidden=false}
+function close(){wrap.hidden=true}
+let mtab='seeds';
+function openMarket(tab){
+  mtab=tab||mtab;const L=level();sheet('Market');tabsEl.hidden=false;
+  tabsEl.innerHTML=[['seeds','Seeds'],['tree','Trees'],['animal','Animals'],['decor','Decorations']].map(([id,n])=>`<button data-t="${id}" aria-pressed="${id===mtab}">${n}</button>`).join('');
+  tabsEl.onclick=e=>{const b=e.target.closest('button');if(b)openMarket(b.dataset.t)};
+  if(mtab==='seeds'){
+    document.getElementById('sheetnote').textContent=`Plant on plowed plots. Planting gives XP and harvesting gives coins.${L<MASTERY_LEVEL?` Crop mastery opens at level ${MASTERY_LEVEL}.`:''}`;
+    list.innerHTML=CROPS.map(c=>{const lock=L<c.lvl;return`<button class="item${c.id===S.sel?' on':''}${lock?' locked':''}" data-id="${c.id}">
+      <span class="pic s">${plantSVG(c,'r')}</span>
+      <span><b>${c.name}</b><span class="meta">${lock?'Unlocks at level '+c.lvl:`Grows ${fmt(c.time)} · sells ${c.sell} · +${c.xp} XP`}${!lock&&L>=MASTERY_LEVEL?'<br>'+starHTML(c.id)+' '+(S.mastery[c.id]||0)+' harvested':''}</span></span>${coin(c.cost)}</button>`}).join('');
+    list.onclick=e=>{const b=e.target.closest('.item');if(!b)return;const c=C[b.dataset.id];if(L<c.lvl){hint(c.name+' unlocks at level '+c.lvl+'.');return}
+      S.sel=c.id;save();setMode('hand');close();hint(c.name+' selected. Tap plowed plots to plant.')};
+  }else{
+    document.getElementById('sheetnote').textContent=mtab==='decor'?'Decorations make your farm yours. Placing gives XP.':mtab==='tree'?'Trees never wither. Collect fruit whenever it is ripe.':'Animals never get sick or wander off. Collect when you see the bubble.';
+    list.innerHTML=ITEMS.filter(i=>i.kind===mtab).map(it=>{const lock=L<it.lvl;return`<button class="item${lock?' locked':''}" data-id="${it.id}">
+      <span class="pic">${itemSVG(it.id,it.kind!=='decor')}</span>
+      <span><b>${it.name}</b><span class="meta">${lock?'Unlocks at level '+it.lvl:it.kind==='decor'?`+${it.xp} XP`:`Every ${fmt(it.time)} · ${it.yield} coins · +${it.xp} XP`}</span></span>${coin(it.cost)}</button>`}).join('');
+    list.onclick=e=>{const b=e.target.closest('.item');if(!b)return;const it=I[b.dataset.id];if(L<it.lvl){hint(it.name+' unlocks at level '+it.lvl+'.');return}
+      if(S.coins<it.cost){hint(it.name+' costs '+it.cost+' coins.');return}
+      close();setMode('place',it.id);hint('Tap grass to place your '+it.name+'.',['Done',()=>setMode('hand')])};
+  }
+}
+function openGift(){
+  sheet('Gift Box','Gifts wait here until you place them.');
+  const ids=Object.keys(S.gift);
+  list.innerHTML=ids.length?ids.map(id=>{const it=I[id];return`<button class="item" data-id="${id}"><span class="pic">${itemSVG(id,it.kind!=='decor')}</span><span><b>${it.name}</b><span class="meta">${it.kind==='tree'?'Tree':it.kind==='animal'?'Animal':'Decoration'}</span></span><span class="price">×${S.gift[id]}</span></button>`}).join('')
+    :'<p class="meta" style="padding:8px 4px">Your gift box is empty.</p>';
+  list.onclick=e=>{const b=e.target.closest('.item');if(!b)return;close();setMode('gift',b.dataset.id);hint('Tap grass to place your '+I[b.dataset.id].name+'.',['Done',()=>setMode('hand')])};
+}
+function openRibbons(){
+  sheet('Ribbons','Every ribbon has four colors: yellow, white, red and blue.');
+  list.innerHTML=RIBBONS.map(r=>{const have=S.ribbons[r.id]||0,n=S.stats[r.stat]||0,next=r.tiers[have];
+    const col=have?TIER[have-1].c:'#e3d6bd';
+    return`<div class="item" style="grid-template-columns:44px 1fr auto"><span class="rib">${ribbonSVG(col,!have)}</span><span><b>${r.name}</b><span class="meta">${r.desc}${next?` · ${n.toLocaleString()} / ${next.toLocaleString()} for ${TIER[have].n}`:' · all colors earned'}</span><span class="prog"><i style="width:${next?Math.min(100,100*n/next):100}%"></i></span></span><span class="meta">${have}/4</span></div>`}).join('');
+  list.onclick=null;
+}
+function openMore(){
+  sheet('Tools');const idx=SIZES.findIndex(s=>s.n===S.size),next=SIZES[idx+1];
+  list.innerHTML=`<button class="item" data-a="move" style="grid-template-columns:52px 1fr"><span class="pic">${ICON.move}</span><span><b>Move</b><span class="meta">Pick something up and put it somewhere else.</span></span></button>
+  <button class="item" data-a="delete" style="grid-template-columns:52px 1fr"><span class="pic">${ICON.del}</span><span><b>Delete</b><span class="meta">Clear anything back to grass. No refunds.</span></span></button>
+  <button class="item" data-a="expand"><span class="pic">${ICON.expand}</span><span><b>Expand farm</b><span class="meta">${next?`${next.n}×${next.n} · needs level ${next.lvl}`:'Your farm is at its biggest size.'}</span></span>${next?coin(next.cost):''}</button>`;
+  list.onclick=e=>{const b=e.target.closest('.item');if(!b)return;const a=b.dataset.a;
+    if(a==='move'){close();setMode('move');hint('Tap something to move.',['Done',()=>setMode('hand')])}
+    if(a==='delete'){close();setMode('delete');hint('Tap anything to clear it.',['Done',()=>setMode('hand')])}
+    if(a==='expand'&&next){if(level()<next.lvl){hint(`Expanding to ${next.n}×${next.n} needs level ${next.lvl}.`);return}if(S.coins<next.cost){hint(`You need ${(next.cost-S.coins).toLocaleString()} more coins.`);return}
+      S.coins-=next.cost;S.size=next.n;save();close();layout();hud();hint('Welcome to your '+next.n+'×'+next.n+' farm!')}};
+}
+function openFarmer(){
+  const li=levelInfo(S.xp),L=li.L;sheet('Level '+L+' · '+title(L),`${(li.need-li.into).toLocaleString()} XP to level ${L+1} (${title(L+1)}). Plowing, planting and buying give XP.`);
+  const ups=[];for(let l=L+1;l<=L+4;l++){const u=[...CROPS.filter(c=>c.lvl===l).map(c=>c.name),...ITEMS.filter(i=>i.lvl===l).map(i=>i.name)];if(l===MASTERY_LEVEL)u.push('Crop mastery');if(u.length)ups.push(`<div class="item" style="grid-template-columns:52px 1fr"><span class="lvl" style="width:40px;height:40px;font-size:1.1rem;margin:auto">${l}</span><span><b>${title(l)}</b><span class="meta">${u.join(', ')}</span></span></div>`)}
+  list.innerHTML=ups.join('')||'<p class="meta">More is coming soon.</p>';list.onclick=null;
+}
+document.getElementById('sheetclose').onclick=close;
+wrap.addEventListener('click',e=>{if(e.target===wrap)close()});
+document.getElementById('t-hand').onclick=()=>{setMode('hand');hint('Farm tool: tap to plow, plant, harvest and collect. Drag to queue a row.')};
+document.getElementById('t-market').onclick=()=>openMarket();
+document.getElementById('t-gift').onclick=openGift;
+document.getElementById('t-ribbons').onclick=openRibbons;
+document.getElementById('t-more').onclick=openMore;
+document.getElementById('lvlchip').onclick=openFarmer;
+
+/* ---------- start ---------- */
+layout();hud();
+if(!S.welcomed){
+  S.welcomed=true;for(const id in WELCOME)S.gift[id]=(S.gift[id]||0)+WELCOME[id];save();hud();
+  showModal('Welcome to Clover Hollow!','A welcome package arrived','A fruit tree, a cow, a hen and hay bales to get your farm started. They are waiting in your Gift Box.',
+    Object.entries(WELCOME).map(([id,n])=>`<span>${itemSVG(id,false)}${n>1?`<em>×${n}</em>`:''}</span>`).join(''),'Open my Gift Box',openGift);
+  hint('Your six plots are plowed. Pick Sunpea seeds in the Market and tap a plot to plant.');
+}else hint('Welcome back, '+title(level())+'! Tap to plow, plant, harvest and collect.');
+setInterval(()=>{paintAll()},1000);
+setInterval(save,10000);
+let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(layout,120)});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else paintAll()});
+})();
+</script>
+
+</body>
+</html>
