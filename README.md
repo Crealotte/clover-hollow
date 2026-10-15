@@ -3,7 +3,7 @@
 A cozy farming game in the spirit of the original 2009 Facebook FarmVille, with the warmth of Stardew Valley and hand-drawn art. It has original crops, names and art, and no copied FarmVille assets.
 
 ## Play
-Open `index.html` in a browser. Your farm saves in that browser for now.
+Open `index.html` in a browser. Your farm saves in that browser. On the website you can also tap **Sign in** to save your farm online and add neighbors with friend codes (see `docs/setup-checklist.md` and `privacy.html`).
 
 ## What's in the game
 - Plow → plant → harvest → plow again, with a farmer who walks to every tile
@@ -19,9 +19,9 @@ Open `index.html` in a browser. Your farm saves in that browser for now.
 This data is for research only. Clover Hollow uses its own names and art.
 
 ## Roadmap
-1. Core launch game (done: v2)
+1. Core launch game: done (v2)
 2. Hand-drawn art pass
-3. Accounts, online saves and friend codes (Supabase)
+3. Accounts, online saves and friend codes (Supabase): done
 4. Neighbors: visit, fertilize, gifts
 5. Storage, coops and stables, collections
 6. Crafting, vehicles

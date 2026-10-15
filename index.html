@@ -118,6 +118,27 @@ button:focus-visible{outline:3px solid var(--barn);outline-offset:2px}
 .card .gifts span{width:52px;height:52px;background:var(--grass);border-radius:12px;padding:3px;position:relative}
 .card .gifts em{position:absolute;right:-4px;bottom:-4px;background:var(--barn);color:#fff;border-radius:999px;font-style:normal;font-size:.7rem;font-weight:800;padding:0 5px}
 @keyframes pop{from{transform:scale(.6);opacity:0}}
+.card .btns{display:grid;gap:8px}
+.big.alt{background:#fffaf0;color:var(--ink)}
+.chip.online{padding:3px 10px 3px 5px;gap:4px;font-size:.85rem;white-space:nowrap;flex:none}
+.chip.online .ic{width:24px;height:24px}
+.chip.online .ic svg{width:100%;height:100%;display:block}
+.chip.online:not(.in) .ok{display:none}
+@media (max-width:380px){.chip.online .lbl{display:none}.chip.online{padding:3px 5px}}
+input{font:inherit;color:var(--ink);user-select:text;-webkit-user-select:text}
+.inp{flex:1;min-width:0;width:100%;box-sizing:border-box;border:2px solid var(--wood-edge);background:#fff;border-radius:12px;padding:9px 12px;font-weight:700;font-size:1rem}
+.panel{background:#fffaf0;border:2px solid var(--wood2);border-radius:14px;padding:12px;display:grid;gap:8px;margin:0}
+.panel h4{margin:0;font-family:var(--font-display);font-weight:800;font-size:1.05rem}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.code{font-family:var(--font-display);font-weight:800;font-size:1.8rem;letter-spacing:.18em;color:var(--barn);font-variant-numeric:tabular-nums}
+.small{border:2px solid var(--wood-edge);background:var(--wood);border-radius:999px;padding:6px 14px;font-weight:800;font-size:.85rem;flex:none}
+.small.warn{color:var(--barn)}
+.nb{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--wood2)}
+.nb:first-child{border-top:0}
+.nb b{font-family:var(--font-display);font-weight:800;font-size:1rem;color:var(--ink)}
+.link{color:#2f6f9f;font-weight:800}
+.err{color:var(--barn);font-weight:800;font-size:.85rem}
+.err:empty{display:none}
 .toast{position:fixed;left:50%;top:calc(64px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:250;background:#fffaf0;border:2px solid var(--wood-edge);border-radius:14px;padding:8px 14px;font-weight:800;display:flex;align-items:center;gap:8px;box-shadow:0 4px 0 rgba(0,0,0,.12);animation:pop .3s cubic-bezier(.3,1.6,.6,1);max-width:calc(100% - 32px)}
 .toast svg{width:26px;height:30px;flex:none}
 @media (prefers-reduced-motion:reduce){.spr svg,.spr .bubble,.card,.toast,.float,.farmer *{animation:none!important}.float{opacity:0}}
@@ -131,6 +152,7 @@ button:focus-visible{outline:3px solid var(--barn);outline-offset:2px}
   <div class="brand">Clover Hollow</div>
   <div class="chip" title="Coins"><span class="coin"></span><span id="coins">0</span></div>
   <button class="chip" id="lvlchip" title="Your level"><span class="lvl" id="lvl">1</span><span class="xpbar"><i id="xpfill"></i></span></button>
+  <button class="chip online" id="t-online" title="Sign in, cloud save and friends"><span class="ic" id="ic-online"></span><span class="lbl" id="onlinelabel">Sign in</span></button>
 </header>
 <main class="field" id="field"><div id="board"></div></main>
 <div class="hint" id="hint"></div>
@@ -149,9 +171,11 @@ button:focus-visible{outline:3px solid var(--barn);outline-offset:2px}
     <div class="list" id="sheetlist"></div>
   </div>
 </div>
-<div class="modal" id="modal" hidden><div class="card"><h3 id="m-title"></h3><div class="sub" id="m-sub"></div><div class="gifts" id="m-gifts"></div><p id="m-text"></p><button class="big" id="m-ok">OK</button></div></div>
+<div class="modal" id="modal" hidden><div class="card"><h3 id="m-title"></h3><div class="sub" id="m-sub"></div><div class="gifts" id="m-gifts"></div><p id="m-text"></p><div class="btns"><button class="big" id="m-ok">OK</button><button class="big alt" id="m-alt" hidden></button></div></div></div>
 <div class="toast" id="toast" hidden></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="supabase-config.js"></script>
 <script>
 (function(){
 const KEY='clover-hollow-v2';
@@ -210,7 +234,13 @@ function fresh(){
 let S;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
 if(!S||!S.tiles)S=fresh();
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+// savedAt marks the last real change, so this device and the cloud copy can tell which farm is newer
+const body=()=>{const {savedAt,...rest}=S;return JSON.stringify(rest)};
+let lastJ=body(),cloudDirty=false;
+function save(){
+  const j=body();if(j!==lastJ){lastJ=j;S.savedAt=Date.now();cloudDirty=true}
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+}
 
 const T=L=>Math.round(5*Math.pow(L-1,2.4)); // total XP needed for level L
 function levelInfo(xp){let L=1;while(xp>=T(L+1))L++;return{L,into:xp-T(L),need:T(L+1)-T(L)}}
@@ -305,7 +335,8 @@ const ICON={
   more:svg(`<circle cx="10" cy="20" r="3.5" fill="#8a5a2b"/><circle cx="20" cy="20" r="3.5" fill="#8a5a2b"/><circle cx="30" cy="20" r="3.5" fill="#8a5a2b"/>`),
   move:svg(`<path d="M20 5 L20 35 M5 20 L35 20" stroke="#8a5a2b" stroke-width="3" stroke-linecap="round"/><path d="M20 3 l-5 6 h10z M20 37 l-5 -6 h10z M3 20 l6 -5 v10z M37 20 l-6 -5 v10z" fill="#8a5a2b"/>`),
   del:svg(`<path d="M10 12 h20 l-2 22 h-16z" fill="#f7e7c6" stroke="#8a5a2b" stroke-width="1.5"/><path d="M8 12 h24 M16 12 v-4 h8 v4 M16 17 v13 M24 17 v13" stroke="#8a5a2b" stroke-width="1.5" fill="none"/>`),
-  expand:svg(`<path d="M20 4 L36 20 L20 36 L4 20Z" fill="#7cbd4b" stroke="#4f8a2f" stroke-width="1.5"/><path d="M20 12 L20 28 M12 20 L28 20" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>`)
+  expand:svg(`<path d="M20 4 L36 20 L20 36 L4 20Z" fill="#7cbd4b" stroke="#4f8a2f" stroke-width="1.5"/><path d="M20 12 L20 28 M12 20 L28 20" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>`),
+  cloud:svg(`<path d="M11 31 a7 7 0 0 1 -.6 -14 a9.5 9.5 0 0 1 18 -2 a8 8 0 0 1 1.6 16z" fill="#fffaf0" stroke="#2f6f9f" stroke-width="2.2" stroke-linejoin="round"/><path d="M15 24 l4 4 l7 -8" stroke="#7cbd4b" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round" class="ok"/>`)
 };
 function ribbonSVG(color,dim){return svg(`<g opacity="${dim?.35:1}"><path d="M14 22 L8 44 L14 40 L18 46 L22 26Z M26 22 L32 44 L26 40 L22 46 L18 26Z" fill="${color}" stroke="rgba(0,0,0,.25)" stroke-width=".8"/><circle cx="20" cy="16" r="12" fill="${color}" stroke="rgba(0,0,0,.25)" stroke-width="1"/><circle cx="20" cy="16" r="8" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.4" stroke-dasharray="2 1.6"/></g>`,'0 0 40 48')}
 
@@ -395,10 +426,11 @@ function bump(stat,n=1){
     if(have<4&&S.stats[stat]>=r.tiers[have]){S.ribbons[r.id]=have+1;const t=TIER[have];
       setTimeout(()=>{toast(ribbonSVG(t.c)+`<span>${t.n} ribbon: ${r.name}! +${t.coins} coins</span>`);gain(null,t.coins,t.xp)},400)}}
 }
-function showModal(title,sub,text,gifts,btn,cb){
+function showModal(title,sub,text,gifts,btn,cb,alt){
   document.getElementById('m-title').textContent=title;document.getElementById('m-sub').textContent=sub||'';
   document.getElementById('m-text').textContent=text;document.getElementById('m-gifts').innerHTML=gifts||'';
   const ok=document.getElementById('m-ok');ok.textContent=btn||'OK';ok.onclick=()=>{document.getElementById('modal').hidden=true;cb&&cb()};
+  const ab=document.getElementById('m-alt');ab.hidden=!alt;if(alt){ab.textContent=alt[0];ab.onclick=()=>{document.getElementById('modal').hidden=true;alt[1]()}}
   document.getElementById('modal').hidden=false;
 }
 function levelUp(L){
@@ -506,8 +538,8 @@ window.addEventListener('pointerup',()=>drag=null);window.addEventListener('poin
 const wrap=document.getElementById('sheetwrap'),list=document.getElementById('sheetlist'),tabsEl=document.getElementById('sheettabs');
 const coin=n=>`<span class="price"><span class="coin"></span>${n.toLocaleString()}</span>`;
 function starHTML(id){const s=stars(id);return`<span class="stars">${'★'.repeat(s)}<span class="off">${'★'.repeat(3-s)}</span></span>`}
-function sheet(title,note){document.getElementById('sheettitle').textContent=title;document.getElementById('sheetnote').textContent=note||'';tabsEl.hidden=true;wrap.hidden=false}
-function close(){wrap.hidden=true}
+function sheet(title,note){document.getElementById('sheettitle').textContent=title;document.getElementById('sheetnote').textContent=note||'';tabsEl.hidden=true;wrap.hidden=false;onlineOpen=false}
+function close(){wrap.hidden=true;onlineOpen=false}
 let mtab='seeds';
 function openMarket(tab){
   mtab=tab||mtab;const L=level();sheet('Market');tabsEl.hidden=false;
@@ -569,18 +601,138 @@ document.getElementById('t-ribbons').onclick=openRibbons;
 document.getElementById('t-more').onclick=openMore;
 document.getElementById('lvlchip').onclick=openFarmer;
 
+/* ---------- online: sign-in, cloud save, friend codes (Supabase) ---------- */
+// The farm always saves on this device first. When signed in, real changes also go to the
+// player's row in `farms` (at most every 15 seconds, and when the tab is hidden).
+const CFG=window.CLOVER_SUPABASE,sb=CFG&&window.supabase?window.supabase.createClient(CFG.url,CFG.anonKey):null;
+let user=null,synced=false,pushing=false,cloudNote='',onlineOpen=false;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const onlineBtn=document.getElementById('t-online');
+document.getElementById('ic-online').innerHTML=ICON.cloud;
+function onlineHud(){onlineBtn.classList.toggle('in',!!user);document.getElementById('onlinelabel').textContent=user?'Friends':'Sign in'}
+function cloudErr(error){
+  return /does not exist|schema cache/i.test(error.message||'')?'The online database is not set up yet.':'Could not reach the cloud. Your farm is still saved on this device.';
+}
+async function push(){
+  if(!sb||!user||!synced||pushing)return;
+  pushing=true;cloudDirty=false;
+  const {error}=await sb.from('farms').upsert({user_id:user.id,state:S,updated_at:new Date().toISOString()});
+  pushing=false;
+  if(error){cloudDirty=true;cloudNote=cloudErr(error)}
+  else cloudNote='Farm saved online at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'.';
+  if(onlineOpen)document.getElementById('sheetnote').textContent=cloudNote;
+}
+// Swap in another copy of the farm (from the cloud, or a fresh one)
+function useFarm(st){
+  S=Object.assign(fresh(),st);S.stats=Object.assign(fresh().stats,st.stats||{});
+  queue=[];cur=null;reserved=0;qcount={};proj={};
+  lastJ=body();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+  close();setMode('hand');layout();hud();
+  if(!S.welcomed)welcome();
+}
+const untouched=()=>!S.xp&&!Object.values(S.stats).some(Boolean);
+const summary=st=>`level ${levelInfo(st.xp||0).L} with ${(st.coins||0).toLocaleString()} coins`;
+async function syncDown(){
+  synced=false;const uid=user.id;
+  const {data,error}=await sb.from('farms').select('state').eq('user_id',uid).maybeSingle();
+  if(!user||user.id!==uid)return;
+  if(error){cloudNote=cloudErr(error);hint(cloudNote);return}
+  const cloud=data&&data.state&&data.state.tiles?data.state:null;
+  const done=msg=>{synced=true;S.owner=uid;cloudDirty=true;save();push();if(msg)hint(msg)};
+  if(!cloud){
+    // First sign-in: this device's farm becomes the online farm (unless it belongs to another account)
+    if(S.owner&&S.owner!==uid)useFarm(fresh());
+    done('Signed in! Your farm now saves online.');return;
+  }
+  if(S.owner===uid){if((cloud.savedAt||0)>(S.savedAt||0))useFarm(cloud);done();return}
+  if(S.owner||untouched()){useFarm(cloud);done('Welcome back! Your farm loaded from the cloud.');return}
+  // This device has a farm played while signed out, and the account already has a different one
+  showModal('Which farm do you want to keep?','You have two farms',
+    `On this device: ${summary(S)}. Saved online: ${summary(cloud)}. The one you don't pick will be replaced.`,'',
+    'Use my online farm',()=>{useFarm(cloud);done('Your online farm is here. It keeps saving online.')},
+    ['Keep this device\'s farm',()=>done('This farm now saves online.')]);
+}
+if(sb)sb.auth.onAuthStateChange((ev,session)=>{
+  const u=session?session.user:null;
+  if((u&&u.id)===(user&&user.id)){user=u;return}
+  user=u;synced=false;onlineHud();
+  if(user)setTimeout(syncDown,0); // Supabase asks not to call it again inside this callback
+  if(onlineOpen)openOnline();
+});
+setInterval(()=>{if(cloudDirty)push()},15000);
+
+function openOnline(){
+  if(!user)return openSignIn();
+  sheet('Friends',cloudNote||'Your farm saves online while you are signed in.');onlineOpen=true;list.onclick=null;
+  list.innerHTML=`<div class="panel"><h4>Your friend code</h4><div class="row"><span class="code" id="fc">······</span><button class="small" id="fcopy">Copy</button></div><span class="meta">Share it with friends so they can add you as a neighbor.</span></div>
+  <form class="panel" id="addf"><h4>Add a neighbor</h4><div class="row"><input class="inp" id="fcode" maxlength="6" placeholder="Friend code" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Friend code"><button class="small">Add</button></div><span class="err" id="addmsg"></span></form>
+  <div class="panel"><h4>Neighbors</h4><div id="nlist" class="meta">Loading…</div></div>
+  <form class="panel" id="namef"><h4>Your farmer name</h4><div class="row"><input class="inp" id="fname" maxlength="24" autocomplete="nickname" aria-label="Farmer name"><button class="small">Save</button></div><span class="meta" id="namemsg">Your neighbors see this name.</span></form>
+  <div class="panel"><span class="meta">Signed in as ${esc(user.email||'')}</span><div class="row"><button class="small" id="signout">Sign out</button><button class="small warn" id="delacct">Delete my account</button></div><span class="err" id="acctmsg"></span><a class="link" href="privacy.html" target="_blank" rel="noopener">Privacy note</a></div>`;
+  const $=id=>document.getElementById(id);
+  $('fcopy').onclick=()=>{const c=$('fc').textContent;if(navigator.clipboard)navigator.clipboard.writeText(c).then(()=>hint('Friend code copied.'),()=>{});};
+  $('addf').onsubmit=async e=>{e.preventDefault();const code=$('fcode').value.trim().toUpperCase();
+    if(!/^[0-9A-F]{6}$/.test(code)){$('addmsg').textContent='Friend codes are 6 letters and numbers.';return}
+    $('addmsg').textContent='';const {error}=await sb.rpc('add_friend',{code});
+    if(error){$('addmsg').textContent=/friend code/i.test(error.message)?error.message+'.':cloudErr(error);return}
+    $('fcode').value='';hint('New neighbor added!');loadNeighbors()};
+  $('namef').onsubmit=async e=>{e.preventDefault();const n=$('fname').value.trim().slice(0,24);if(!n)return;
+    const {error}=await sb.from('profiles').update({display_name:n}).eq('id',user.id);
+    $('namemsg').textContent=error?cloudErr(error):'Saved!'};
+  $('signout').onclick=async()=>{if(cloudDirty)await push();await sb.auth.signOut();hint('Signed out. Your farm still saves on this device.')};
+  $('delacct').onclick=async()=>{const b=$('delacct');
+    if(!b.dataset.sure){b.dataset.sure=1;b.textContent='Tap again to delete for good';$('acctmsg').textContent='This removes your login, online farm, friend code and neighbors. The farm on this device stays.';return}
+    const {error}=await sb.rpc('delete_my_account');
+    if(error){$('acctmsg').textContent=cloudErr(error);return}
+    delete S.owner;save();await sb.auth.signOut({scope:'local'});close();showModal('Account deleted','','Your online account and farm are gone. You can keep playing on this device.')};
+  sb.from('profiles').select('display_name,friend_code').eq('id',user.id).maybeSingle().then(({data,error})=>{
+    if(error||!data){$('fc').textContent='—';$('namemsg').textContent=error?cloudErr(error):'Your profile is missing. Ask Charlotte to check the database setup.';return}
+    $('fc').textContent=data.friend_code;$('fname').value=data.display_name});
+  loadNeighbors();
+}
+async function loadNeighbors(){
+  const el=document.getElementById('nlist');if(!el)return;
+  const {data:fr,error}=await sb.from('friendships').select('friend_id').eq('user_id',user.id);
+  if(error){el.textContent=cloudErr(error);return}
+  const ids=fr.map(f=>f.friend_id);
+  if(!ids.length){el.textContent='No neighbors yet. Add one with their friend code.';return}
+  const [p,f]=await Promise.all([sb.from('profiles').select('id,display_name').in('id',ids),sb.from('farms').select('user_id,xp:state->xp').in('user_id',ids)]);
+  const name=Object.fromEntries((p.data||[]).map(r=>[r.id,r.display_name])),xp=Object.fromEntries((f.data||[]).map(r=>[r.user_id,+r.xp||0]));
+  el.innerHTML=ids.map(id=>{const L=levelInfo(xp[id]||0).L;return`<div class="nb"><span><b>${esc(name[id]||'Farmer')}</b><br>Level ${L} · ${esc(title(L))}</span><button class="small" data-rm="${esc(id)}">Remove</button></div>`}).join('');
+  el.onclick=async e=>{const b=e.target.closest('[data-rm]');if(!b)return;const fid=b.dataset.rm;
+    const {error}=await sb.from('friendships').delete().or(`and(user_id.eq.${user.id},friend_id.eq.${fid}),and(user_id.eq.${fid},friend_id.eq.${user.id})`);
+    if(error)hint(cloudErr(error));else loadNeighbors()};
+}
+function openSignIn(){
+  sheet('Play online','Sign in to save your farm online and add neighbors with friend codes.');onlineOpen=true;list.onclick=null;
+  if(!sb){list.innerHTML='<p class="meta" style="padding:8px 4px">Online play could not load. Check your internet connection and reload the page. Your farm still saves on this device.</p>';return}
+  const local=location.protocol==='file:';
+  list.innerHTML=`<form class="panel" id="signin"><label for="email"><h4>Your email</h4></label><input class="inp" id="email" type="email" required autocomplete="email" inputmode="email" placeholder="you@example.com"><button class="big" id="sendlink"${local?' disabled':''}>Email me a sign-in link</button><span class="meta" id="signmsg">${local?'Sign-in only works on the website, not on a file opened from your computer.':'No password needed. Open the link in the email on this device and you are in.'}</span></form>
+  <p class="meta" style="padding:0 4px">Your farm keeps working without signing in. Read the <a class="link" href="privacy.html" target="_blank" rel="noopener">privacy note</a> to see what we store.</p>`;
+  document.getElementById('signin').onsubmit=async e=>{e.preventDefault();
+    const email=document.getElementById('email').value.trim(),msg=document.getElementById('signmsg'),btn=document.getElementById('sendlink');
+    btn.disabled=true;msg.textContent='Sending…';
+    const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});
+    btn.disabled=false;
+    msg.textContent=error?(/rate|seconds/i.test(error.message)?'Too many sign-in emails right now. Please try again in a while.':'That did not work: '+error.message):'Check your inbox for an email from Clover Hollow and tap the link in it.'};
+}
+onlineBtn.onclick=openOnline;
+onlineHud();
+
 /* ---------- start ---------- */
-layout();hud();
-if(!S.welcomed){
+function welcome(){
   S.welcomed=true;for(const id in WELCOME)S.gift[id]=(S.gift[id]||0)+WELCOME[id];save();hud();
   showModal('Welcome to Clover Hollow!','A welcome package arrived','A fruit tree, a cow, a hen and hay bales to get your farm started. They are waiting in your Gift Box.',
     Object.entries(WELCOME).map(([id,n])=>`<span>${itemSVG(id,false)}${n>1?`<em>×${n}</em>`:''}</span>`).join(''),'Open my Gift Box',openGift);
   hint('Your six plots are plowed. Pick Sunpea seeds in the Market and tap a plot to plant.');
-}else hint('Welcome back, '+title(level())+'! Tap to plow, plant, harvest and collect.');
+}
+layout();hud();
+if(!S.welcomed)welcome();
+else hint('Welcome back, '+title(level())+'! Tap to plow, plant, harvest and collect.');
 setInterval(()=>{paintAll()},1000);
 setInterval(save,10000);
 let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(layout,120)});
-document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else paintAll()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){save();if(cloudDirty)push()}else paintAll()});
 })();
 </script>
 
